@@ -1,0 +1,10 @@
+{
+  "name": "mcp-server-examples",
+  "version": "1.0.0",
+  "description": "Examples for the MCP Server",
+  "type": "module",
+  "dependencies": {
+    "form-data": "^4.0.0",
+    "node-fetch": "^3.3.2"
+  }
+}

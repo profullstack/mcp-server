@@ -26,6 +26,8 @@ A generic, modular server for implementing the Model Control Protocol (MCP). Thi
 - Node.js 18.x or higher
 - pnpm 10.x or higher
 
+This project uses ES Modules (ESM) exclusively. All imports use the `import` syntax rather than `require()`.
+
 ### Installation
 
 ```bash

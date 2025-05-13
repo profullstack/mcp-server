@@ -1,14 +1,15 @@
 /**
  * MCP Server Model Providers Client Example
- * 
+ *
  * This example demonstrates how to interact with the different model providers
  * integrated with the MCP server.
  */
 
 // Using fetch API for simplicity, but you could use any HTTP client
 const MCP_SERVER_URL = 'http://localhost:3000';
-const FormData = require('form-data');
-const fs = require('fs');
+import FormData from 'form-data';
+import fs from 'fs';
+import fetch from 'node-fetch';
 
 /**
  * MCP Client class for interacting with an MCP server
@@ -72,7 +73,8 @@ class MCPClient {
   /**
    * Perform streaming inference with the active model
    * @param {Object} data - Input data for inference
-   * @returns {Promise<ReadableStream>} Stream of inference results
+   * @returns {Promise<ReadableStream<Uint8Array>>} Stream of inference results
+   * @throws {Error} If the response body is null
    */
   async inferStream(data) {
     const streamData = { ...data, stream: true };
@@ -83,6 +85,10 @@ class MCPClient {
       },
       body: JSON.stringify(streamData)
     });
+
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
 
     return response.body;
   }
@@ -282,3 +288,6 @@ async function main() {
 
 // Run the example
 main().catch(console.error);
+
+// Export the client class for use in other files
+export default MCPClient;
