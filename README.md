@@ -15,6 +15,9 @@ A generic, modular server for implementing the Model Control Protocol (MCP). Thi
 - Comprehensive testing infrastructure with Mocha and Chai
 - Powerful module search functionality
 - Module metadata display in API responses
+- Integration with real AI model providers (OpenAI, Stability AI, Anthropic, Hugging Face)
+- Support for text generation, image generation, and speech-to-text models
+- Streaming inference support for compatible models
 
 ## Getting Started
 
@@ -48,6 +51,36 @@ pnpm dev
 ```
 
 The server will start on http://localhost:3000 by default.
+
+### Configuration
+
+Copy the sample environment file and edit it with your API keys:
+
+```bash
+# Copy the sample environment file
+cp sample.env .env
+
+# Edit the file with your favorite editor
+nano .env
+```
+
+At minimum, you'll need to add API keys for the model providers you want to use:
+
+```
+# OpenAI API (for GPT-4 and Whisper)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Stability AI API (for Stable Diffusion)
+STABILITY_API_KEY=your_stability_api_key_here
+
+# Anthropic API (for Claude models)
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+```
+
+You can get these API keys from:
+- OpenAI: https://platform.openai.com/api-keys
+- Stability AI: https://platform.stability.ai/account/keys
+- Anthropic: https://console.anthropic.com/settings/keys
 
 ### Testing the Server
 
@@ -138,6 +171,69 @@ The MCP server implements a standardized set of methods that all MCP servers sho
 - `POST /model/infer` - Perform inference with the active model
 - `POST /model/:modelId/infer` - Perform inference with a specific model
 
+#### Supported Models
+
+The MCP server supports the following model types:
+
+| Model Type | Provider | Capabilities | Example IDs |
+|------------|----------|--------------|-------------|
+| GPT Models | OpenAI | Text generation | gpt-4, gpt-3.5-turbo |
+| Whisper | OpenAI | Speech-to-text | whisper, whisper-1 |
+| Stable Diffusion | Stability AI | Image generation | stable-diffusion-xl-1024-v1-0 |
+| Claude Models | Anthropic | Text generation | claude-3-opus, claude-3-sonnet |
+| Custom Models | Hugging Face | Various | (any Hugging Face model ID) |
+
+#### Inference Examples
+
+Text generation with GPT-4:
+
+```bash
+# Activate the model
+curl -X POST http://localhost:3000/model/gpt-4/activate \
+  -H "Content-Type: application/json" \
+  -d '{"config": {"temperature": 0.7}}'
+
+# Perform inference
+curl -X POST http://localhost:3000/model/infer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Explain quantum computing in simple terms",
+    "temperature": 0.5,
+    "max_tokens": 200
+  }'
+```
+
+Image generation with Stable Diffusion:
+
+```bash
+# Activate the model
+curl -X POST http://localhost:3000/model/stable-diffusion/activate \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
+# Generate an image
+curl -X POST http://localhost:3000/model/infer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A beautiful sunset over mountains",
+    "height": 1024,
+    "width": 1024,
+    "steps": 30
+  }'
+```
+
+Streaming text generation:
+
+```bash
+# Enable streaming
+curl -X POST http://localhost:3000/model/infer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Write a short story about a robot",
+    "stream": true
+  }'
+```
+
 ### Module Management
 
 - `GET /modules` - List installed modules
@@ -153,7 +249,23 @@ For detailed information about these methods, see [MCP Standard Methods](docs/mc
 
 ## Configuration
 
-Configuration is stored in `src/core/config.js`. You can modify this file to change server settings.
+Configuration is loaded from environment variables and stored in `src/core/config.js`. The easiest way to configure the server is to edit the `.env` file in the project root.
+
+### Environment Variables
+
+Key environment variables include:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| PORT | Server port | 3000 |
+| HOST | Server host | localhost |
+| NODE_ENV | Environment (development/production) | development |
+| OPENAI_API_KEY | OpenAI API key | (required for OpenAI models) |
+| STABILITY_API_KEY | Stability AI API key | (required for Stable Diffusion) |
+| ANTHROPIC_API_KEY | Anthropic API key | (required for Claude models) |
+| HUGGINGFACE_API_KEY | Hugging Face API key | (required for Hugging Face models) |
+
+See `sample.env` for a complete list of configuration options.
 
 ## Examples
 
@@ -305,6 +417,93 @@ async function searchModules(query) {
 ```
 
 The search is comprehensive and will find matches in any field, including nested objects like dependencies, keywords, and other metadata.
+
+## Model Providers
+
+The MCP server integrates with several AI model providers:
+
+### OpenAI
+
+OpenAI provides GPT models for text generation and Whisper for speech-to-text:
+
+```javascript
+// Text generation example
+const response = await fetch('http://localhost:3000/model/infer', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    prompt: 'Write a poem about artificial intelligence',
+    temperature: 0.7,
+    max_tokens: 200
+  })
+});
+
+// Speech-to-text example (requires multipart form data)
+const formData = new FormData();
+formData.append('file', audioFile);
+formData.append('model', 'whisper-1');
+formData.append('language', 'en');
+
+const response = await fetch('http://localhost:3000/model/whisper/infer', {
+  method: 'POST',
+  body: formData
+});
+```
+
+### Stability AI
+
+Stability AI provides Stable Diffusion for image generation:
+
+```javascript
+const response = await fetch('http://localhost:3000/model/infer', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    prompt: 'A photorealistic image of a futuristic city',
+    height: 1024,
+    width: 1024,
+    steps: 30,
+    cfg_scale: 7
+  })
+});
+
+// The response includes base64-encoded images
+const result = await response.json();
+const imageBase64 = result.response[0].base64;
+```
+
+### Anthropic
+
+Anthropic provides Claude models for text generation:
+
+```javascript
+const response = await fetch('http://localhost:3000/model/infer', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    prompt: 'Explain how neural networks work',
+    temperature: 0.5,
+    max_tokens: 300
+  })
+});
+```
+
+### Hugging Face
+
+Hugging Face provides access to thousands of open-source models:
+
+```javascript
+const response = await fetch('http://localhost:3000/model/custom-model-name/infer', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    prompt: 'Input for the model',
+    parameters: {
+      // Model-specific parameters
+    }
+  })
+});
+```
 
 ## Documentation
 

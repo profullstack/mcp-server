@@ -62,6 +62,15 @@ The model state component manages the state of models, including which model is 
 
 Model providers are responsible for loading and managing specific models. They implement the model interface and provide the actual inference functionality.
 
+The MCP server includes integrations with several AI model providers:
+
+1. **OpenAI Provider**: Connects to OpenAI's API for GPT models (text generation) and Whisper (speech-to-text)
+2. **Stability AI Provider**: Connects to Stability AI's API for Stable Diffusion (image generation)
+3. **Anthropic Provider**: Connects to Anthropic's API for Claude models (text generation)
+4. **Hugging Face Provider**: Connects to Hugging Face's inference API for various open-source models
+
+Each provider implements a standard interface for performing inference and streaming inference, allowing the server to work with different model types through a unified API.
+
 ### Module System
 
 The module system allows for extending the server's functionality through modules. Each module can add new routes, middleware, models, or other functionality to the server.

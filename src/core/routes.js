@@ -12,6 +12,7 @@ import { config } from './config.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Transform } from 'stream-transform';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -187,9 +188,33 @@ export function setupCoreRoutes(app) {
         try {
           const result = await modelManager.performStreamingInference(active, body);
 
-          // In a real implementation, this would stream chunks of data
-          // For now, we'll just send the entire response as one event
-          return c.body(`data: ${JSON.stringify(result)}\n\n`);
+          // Handle real streaming responses from model providers
+          if (result.response && typeof result.response.pipe === 'function') {
+            // If we got a real stream, pipe it to the client
+            // First convert the stream to SSE format if needed
+            const stream = result.response;
+            
+            // Create a new Transform stream to convert the provider's stream format to SSE
+            const transform = new Transform({
+              transform(chunk, controller) {
+                // Convert chunk to string if it's a buffer
+                const data = chunk instanceof Buffer ? chunk.toString() : chunk;
+                
+                // Format as SSE
+                controller.enqueue(`data: ${data}\n\n`);
+              }
+            });
+            
+            // Pipe the provider's stream through our transformer
+            const transformedStream = stream.pipe(transform);
+            
+            // Return the transformed stream
+            return c.body(transformedStream);
+          } else {
+            // For backward compatibility with the mock implementation
+            // Just send the entire response as one event
+            return c.body(`data: ${JSON.stringify(result)}\n\n`);
+          }
         } catch (error) {
           return c.body(
             `data: ${JSON.stringify({
@@ -235,9 +260,33 @@ export function setupCoreRoutes(app) {
         try {
           const result = await modelManager.performStreamingInference(modelId, body);
 
-          // In a real implementation, this would stream chunks of data
-          // For now, we'll just send the entire response as one event
-          return c.body(`data: ${JSON.stringify(result)}\n\n`);
+          // Handle real streaming responses from model providers
+          if (result.response && typeof result.response.pipe === 'function') {
+            // If we got a real stream, pipe it to the client
+            // First convert the stream to SSE format if needed
+            const stream = result.response;
+            
+            // Create a new Transform stream to convert the provider's stream format to SSE
+            const transform = new Transform({
+              transform(chunk, controller) {
+                // Convert chunk to string if it's a buffer
+                const data = chunk instanceof Buffer ? chunk.toString() : chunk;
+                
+                // Format as SSE
+                controller.enqueue(`data: ${data}\n\n`);
+              }
+            });
+            
+            // Pipe the provider's stream through our transformer
+            const transformedStream = stream.pipe(transform);
+            
+            // Return the transformed stream
+            return c.body(transformedStream);
+          } else {
+            // For backward compatibility with the mock implementation
+            // Just send the entire response as one event
+            return c.body(`data: ${JSON.stringify(result)}\n\n`);
+          }
         } catch (error) {
           return c.body(
             `data: ${JSON.stringify({

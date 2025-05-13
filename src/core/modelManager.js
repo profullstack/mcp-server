@@ -1,5 +1,6 @@
 import { config } from './config.js';
 import { logger } from '../utils/logger.js';
+import { getProviderForModel } from '../utils/modelProviders.js';
 
 /**
  * In-memory model state
@@ -17,6 +18,7 @@ export const modelState = {
       version: '1.0',
       description: 'Advanced language model with strong reasoning capabilities',
       capabilities: ['text-generation', 'code-generation', 'reasoning'],
+      provider: 'openai',
     },
     {
       id: 'stable-diffusion',
@@ -24,6 +26,7 @@ export const modelState = {
       version: '3.0',
       description: 'Image generation model',
       capabilities: ['image-generation'],
+      provider: 'stability',
     },
     {
       id: 'whisper',
@@ -31,6 +34,15 @@ export const modelState = {
       version: '2.0',
       description: 'Speech recognition model',
       capabilities: ['speech-to-text'],
+      provider: 'openai',
+    },
+    {
+      id: 'claude-3-opus',
+      name: 'Claude 3 Opus',
+      version: '1.0',
+      description: 'Advanced language model from Anthropic',
+      capabilities: ['text-generation', 'code-generation', 'reasoning'],
+      provider: 'anthropic',
     },
   ],
 };
@@ -265,22 +277,36 @@ export async function performInference(modelId, data) {
       throw new Error(`Model ${modelId} is not activated`);
     }
 
-    // In a real implementation, this would call the actual model's inference logic
-    // This is just a mock implementation
-    const mockResponse = `Model [${modelId}] responded to prompt: "${data.prompt || 'No prompt provided'}"`;
+    // Get the appropriate provider for this model
+    const provider = getProviderForModel(modelId);
+    
+    if (!provider) {
+      throw new Error(`No provider available for model ${modelId}`);
+    }
+
+    // Set a timeout for the inference request
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Inference request timed out after ${config.model.inferenceTimeout}ms`));
+      }, config.model.inferenceTimeout);
+    });
+
+    // Perform the inference with the provider
+    const inferencePromise = provider.performInference({
+      ...data,
+      model: modelId,
+    });
+
+    // Race the inference against the timeout
+    const result = await Promise.race([inferencePromise, timeoutPromise]);
 
     // Update last activity
     modelState.lastActivity = new Date().toISOString();
 
     return {
+      ...result,
       modelId,
-      response: mockResponse,
       timestamp: modelState.lastActivity,
-      parameters: {
-        temperature: data.temperature,
-        max_tokens: data.max_tokens,
-        top_p: data.top_p,
-      },
     };
   } catch (error) {
     logger.error(`Inference error with model ${modelId}: ${error.message}`);
@@ -319,16 +345,43 @@ export async function performStreamingInference(modelId, data) {
       throw new Error(`Model ${modelId} is not activated`);
     }
 
-    // In a real implementation, this would set up a streaming response
-    // This is just a mock implementation
-    const mockResponse = `Model [${modelId}] streamed response to prompt: "${data.prompt || 'No prompt provided'}"`;
+    // Get the appropriate provider for this model
+    const provider = getProviderForModel(modelId);
+    
+    if (!provider) {
+      throw new Error(`No provider available for model ${modelId}`);
+    }
+
+    // Check if the provider supports streaming
+    if (!provider.performStreamingInference) {
+      throw new Error(`Streaming is not supported for model ${modelId}`);
+    }
+
+    // Set a timeout for the streaming request
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Streaming request timed out after ${config.model.inferenceTimeout}ms`));
+      }, config.model.inferenceTimeout);
+    });
+
+    // Perform the streaming inference with the provider
+    const streamingPromise = provider.performStreamingInference({
+      ...data,
+      model: modelId,
+    });
+
+    // Race the streaming against the timeout
+    const stream = await Promise.race([streamingPromise, timeoutPromise]);
 
     // Update last activity
     modelState.lastActivity = new Date().toISOString();
 
+    // For compatibility with the existing mock implementation
+    // In a real implementation, we would return the stream directly
+    // and handle it appropriately in the routes
     return {
       modelId,
-      response: mockResponse,
+      response: stream,
       timestamp: modelState.lastActivity,
       isStreaming: true,
       parameters: {

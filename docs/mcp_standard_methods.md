@@ -51,6 +51,56 @@ This document outlines the standard methods that all Model Control Protocol (MCP
   - Example request: `{ "prompt": "Hello, how are you?", "max_tokens": 100 }`
   - Example response: `{ "modelId": "gpt-4", "response": "I'm doing well, thank you for asking!" }`
 
+#### Inference Parameters
+
+The inference endpoints accept different parameters depending on the model type:
+
+##### Text Generation Models (GPT, Claude)
+
+```json
+{
+  "prompt": "Your prompt text here",
+  "temperature": 0.7,           // Controls randomness (0.0 to 1.0)
+  "max_tokens": 100,            // Maximum tokens to generate
+  "top_p": 0.9,                 // Nucleus sampling parameter
+  "stream": false               // Set to true for streaming responses
+}
+```
+
+##### Image Generation Models (Stable Diffusion)
+
+```json
+{
+  "prompt": "A description of the image to generate",
+  "height": 1024,               // Image height in pixels
+  "width": 1024,                // Image width in pixels
+  "steps": 30,                  // Number of diffusion steps
+  "cfg_scale": 7,               // How closely to follow the prompt
+  "samples": 1                  // Number of images to generate
+}
+```
+
+##### Speech-to-Text Models (Whisper)
+
+For Whisper models, use multipart form data with the following fields:
+- `file`: The audio file to transcribe
+- `model`: The model to use (e.g., "whisper-1")
+- `language`: Optional language code (e.g., "en")
+- `temperature`: Controls randomness (0.0 to 1.0)
+- `response_format`: Format of the response (json, text, srt, etc.)
+
+#### Streaming Responses
+
+For streaming responses, set `stream: true` in the request body. The response will be in Server-Sent Events (SSE) format with `Content-Type: text/event-stream`.
+
+Example streaming request:
+```json
+{
+  "prompt": "Write a short story",
+  "stream": true
+}
+```
+
 ### Tools and Resources
 
 - **GET /tools** - List available tools
