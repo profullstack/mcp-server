@@ -1,0 +1,58 @@
+{
+  "name": "mcp-server",
+  "version": "1.0.0",
+  "description": "A generic, modular server for implementing the Model Control Protocol (MCP)",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "mocha --require=./test/setup.js test/**/*.test.js",
+    "test:modules": "mocha --require=./test/setup.js src/modules/*/test/**/*.test.js",
+    "test:all": "mocha --require=./test/setup.js \"test/**/*.test.js\" \"src/modules/*/test/**/*.test.js\"",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "create-module": "node scripts/create-module.js",
+    "prepare": "husky",
+    "pre-commit": "lint-staged"
+  },
+  "keywords": [
+    "mcp",
+    "model",
+    "ai",
+    "server",
+    "api"
+  ],
+  "author": "MCP Server Team",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.5",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.1",
+    "dotenv": "^16.3.1",
+    "hono": "^4.7.9",
+    "jsdom": "^22.1.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "eslint": "^8.56.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.0.0",
+    "mocha": "^10.2.0",
+    "prettier": "^3.1.1",
+    "sinon": "^15.0.3",
+    "supertest": "^6.3.3"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "mcp-module-template",
+  "version": "1.0.0",
+  "description": "A template for creating new MCP server modules",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "template"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  }
+}

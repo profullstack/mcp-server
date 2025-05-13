@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run lint-staged to lint and format staged files
+pnpm lint-staged
+
+# Run tests before commit
+echo "Running tests before commit..."
+pnpm test || exit 1
+
+echo "Pre-commit checks passed. Proceeding with commit."
