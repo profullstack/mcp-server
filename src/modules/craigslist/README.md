@@ -90,7 +90,20 @@ Searches Craigslist across multiple cities.
       "price": "$1200",
       "date": "2023-05-10T12:30:45-0700",
       "location": "Downtown",
+      "description": "MacBook Pro 16\" 2019 (brand: Apple, condition: excellent) - Located in Downtown",
+      "attributes": {
+        "brand": "Apple",
+        "model": "MacBook Pro",
+        "condition": "excellent",
+        "year": "2019",
+        "processor": "Intel i9",
+        "memory": "32GB"
+      },
       "imageUrl": "https://images.craigslist.org/abcdef_300x300.jpg",
+      "images": [
+        "https://images.craigslist.org/abcdef_300x300.jpg",
+        "https://images.craigslist.org/ghijkl_300x300.jpg"
+      ],
       "city": "seattle"
     },
     ...
@@ -121,16 +134,50 @@ Gets detailed information about a specific Craigslist posting.
   "details": {
     "title": "MacBook Pro 16\" 2019",
     "price": "$1200",
-    "description": "Selling my MacBook Pro...",
+    "description": "Selling my MacBook Pro 16\" 2019 with 1TB SSD and 32GB RAM. In excellent condition, only used for 6 months. Comes with original box and charger. AppleCare+ until 2023. Asking $1200 firm.",
     "postingDate": "2023-05-10 12:30",
     "images": [
       "https://images.craigslist.org/abcdef_600x450.jpg",
-      ...
+      "https://images.craigslist.org/ghijkl_600x450.jpg",
+      "https://images.craigslist.org/mnopqr_600x450.jpg"
     ],
     "attributes": {
       "make": "Apple",
       "model": "MacBook Pro",
-      "condition": "excellent"
+      "condition": "excellent",
+      "year": "2019",
+      "processor": "Intel i9",
+      "memory": "32GB",
+      "storage": "1TB SSD",
+      "screen size": "16 inch",
+      "graphics": "AMD Radeon Pro 5500M",
+      "warranty": "AppleCare+ until 2023",
+      "color": "Space Gray",
+      "keyboard": "US English",
+      "battery cycles": "125",
+      "os": "macOS Monterey",
+      "post id": "12345678",
+      "posted": "2023-05-10 12:30",
+      "updated": "2023-05-11 09:15"
+    },
+    "specs": {
+      "make": "Apple",
+      "model": "MacBook Pro",
+      "condition": "excellent",
+      "year": "2019",
+      "processor": "Intel i9",
+      "memory": "32GB",
+      "storage": "1TB SSD",
+      "screen size": "16 inch",
+      "graphics": "AMD Radeon Pro 5500M",
+      "warranty": "AppleCare+ until 2023",
+      "color": "Space Gray",
+      "keyboard": "US English",
+      "battery cycles": "125",
+      "os": "macOS Monterey",
+      "post id": "12345678",
+      "posted": "2023-05-10 12:30",
+      "updated": "2023-05-11 09:15"
     },
     "location": {
       "latitude": "47.6062",
@@ -318,5 +365,58 @@ This module requires the following npm packages:
 ## Notes
 
 - Craigslist may rate-limit excessive requests. The module limits the number of cities searched at once to avoid this.
-- This module does not use the official Craigslist API (which doesn't exist) but instead parses the HTML of Craigslist pages.
-- The structure of Craigslist pages may change, which could break this module.
+- This module does not use the official Craigslist API (which doesn't exist) but instead parses the JSON-LD data embedded in Craigslist pages.
+- As of May 2025, Craigslist has moved from traditional HTML elements to a JSON-LD structure for search results, which this module now supports.
+- The structure of Craigslist pages may change, which could break this module. If search results stop working, check if Craigslist has changed their data structure again.
+
+## Enhanced Features
+
+### Multiple Images
+
+The module now extracts all available images for each listing, not just the first one. These are provided in the `images` array, while the `imageUrl` property is maintained for backward compatibility.
+
+### Rich Attributes
+
+Search results now include:
+
+- Basic attributes extracted from JSON-LD data and listing titles
+- Generated descriptions that summarize key information
+- Multiple images for each listing
+
+Individual listing details include:
+
+- Complete, properly cleaned description text
+- Comprehensive product-specific attributes extracted from multiple sources:
+  - Attribute groups in the HTML
+  - Right-hand side navigation elements
+  - Description text using pattern matching
+  - JSON-LD structured data
+  - Meta tags
+- Geo-location information
+- Posting metadata (date, ID, etc.)
+
+### Bike-Specific Attributes
+
+For bicycle listings, the module extracts specialized attributes such as:
+
+- Bicycle type (road, mountain, hybrid, etc.)
+- Frame size and material
+- Wheel size
+- Number of speeds
+- Brand and model
+- Components (Shimano, SRAM, etc.)
+- Brake type
+- Suspension type
+
+## Development Notes
+
+### Tests
+
+The tests for this module have been updated to reflect the new features, but they may require additional work to run properly. The current tests are designed to verify:
+
+1. The URL construction for search queries
+2. The parsing of JSON-LD data from search results
+3. The extraction of multiple images and attributes
+4. The detailed parsing of posting pages
+
+If you're modifying this module, be sure to update the tests accordingly. The tests use Sinon to stub external dependencies like fetch requests.
