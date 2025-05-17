@@ -1,6 +1,6 @@
 /**
  * Model Providers Utilities
- * 
+ *
  * This file contains utility functions for interacting with various model providers.
  */
 
@@ -10,20 +10,17 @@ import fetch from 'node-fetch';
 import https from 'https';
 import http from 'http';
 import FormData from 'form-data';
-import { Transform } from 'stream-transform';
 
 // Create HTTP agents for proxy support if enabled
 const createAgents = () => {
   if (!config.proxy.enabled) return {};
 
-  const httpAgent = config.proxy.http 
-    ? new http.Agent({ proxy: config.proxy.http }) 
+  const httpAgent = config.proxy.http ? new http.Agent({ proxy: config.proxy.http }) : undefined;
+
+  const httpsAgent = config.proxy.https
+    ? new https.Agent({ proxy: config.proxy.https })
     : undefined;
-  
-  const httpsAgent = config.proxy.https 
-    ? new https.Agent({ proxy: config.proxy.https }) 
-    : undefined;
-  
+
   return { httpAgent, httpsAgent };
 };
 
@@ -72,41 +69,39 @@ export const openaiProvider = {
 
     const model = data.model || config.openai.defaultModel;
     const url = `${config.openai.baseUrl}/chat/completions`;
-    
+
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.openai.apiKey}`,
+      Authorization: `Bearer ${config.openai.apiKey}`,
     };
-    
+
     if (config.openai.orgId) {
       headers['OpenAI-Organization'] = config.openai.orgId;
     }
-    
+
     if (config.openai.apiVersion) {
       headers['OpenAI-Version'] = config.openai.apiVersion;
     }
-    
+
     const requestBody = {
       model,
-      messages: [
-        { role: 'user', content: data.prompt }
-      ],
+      messages: [{ role: 'user', content: data.prompt }],
       temperature: data.temperature !== undefined ? data.temperature : config.openai.temperature,
       max_tokens: data.max_tokens !== undefined ? data.max_tokens : config.openai.maxTokens,
       top_p: data.top_p !== undefined ? data.top_p : 1,
       stream: false,
     };
-    
+
     logger.debug(`OpenAI API request: ${JSON.stringify(requestBody)}`);
-    
+
     const response = await fetchWithRetry(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody),
     });
-    
+
     const result = await response.json();
-    
+
     return {
       modelId: model,
       response: result.choices[0].message.content,
@@ -119,7 +114,7 @@ export const openaiProvider = {
       },
     };
   },
-  
+
   /**
    * Perform streaming inference with OpenAI models
    * @param {Object} data - Input data for inference
@@ -132,42 +127,40 @@ export const openaiProvider = {
 
     const model = data.model || config.openai.defaultModel;
     const url = `${config.openai.baseUrl}/chat/completions`;
-    
+
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.openai.apiKey}`,
+      Authorization: `Bearer ${config.openai.apiKey}`,
     };
-    
+
     if (config.openai.orgId) {
       headers['OpenAI-Organization'] = config.openai.orgId;
     }
-    
+
     if (config.openai.apiVersion) {
       headers['OpenAI-Version'] = config.openai.apiVersion;
     }
-    
+
     const requestBody = {
       model,
-      messages: [
-        { role: 'user', content: data.prompt }
-      ],
+      messages: [{ role: 'user', content: data.prompt }],
       temperature: data.temperature !== undefined ? data.temperature : config.openai.temperature,
       max_tokens: data.max_tokens !== undefined ? data.max_tokens : config.openai.maxTokens,
       top_p: data.top_p !== undefined ? data.top_p : 1,
       stream: true,
     };
-    
+
     logger.debug(`OpenAI API streaming request: ${JSON.stringify(requestBody)}`);
-    
+
     const response = await fetchWithRetry(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody),
     });
-    
+
     return response.body;
   },
-  
+
   /**
    * Transcribe audio using OpenAI's Whisper API
    * @param {Object} data - Input data for transcription
@@ -177,46 +170,50 @@ export const openaiProvider = {
     if (!config.openai.apiKey) {
       throw new Error('OpenAI API key is not configured');
     }
-    
+
     if (!data.audioFile) {
       throw new Error('Audio file is required for transcription');
     }
 
     const model = data.model || config.openai.whisper.defaultModel;
     const url = `${config.openai.baseUrl}/audio/transcriptions`;
-    
+
     const formData = new FormData();
     formData.append('file', data.audioFile);
     formData.append('model', model);
-    
+
     if (data.language || config.openai.whisper.defaultLanguage) {
       formData.append('language', data.language || config.openai.whisper.defaultLanguage);
     }
-    
-    formData.append('temperature', data.temperature !== undefined 
-      ? data.temperature 
-      : config.openai.whisper.defaultTemperature);
-      
-    formData.append('response_format', data.response_format || config.openai.whisper.defaultResponseFormat);
-    
+
+    formData.append(
+      'temperature',
+      data.temperature !== undefined ? data.temperature : config.openai.whisper.defaultTemperature
+    );
+
+    formData.append(
+      'response_format',
+      data.response_format || config.openai.whisper.defaultResponseFormat
+    );
+
     const headers = {
-      'Authorization': `Bearer ${config.openai.apiKey}`,
+      Authorization: `Bearer ${config.openai.apiKey}`,
     };
-    
+
     if (config.openai.orgId) {
       headers['OpenAI-Organization'] = config.openai.orgId;
     }
-    
+
     logger.debug(`Whisper API request for model: ${model}`);
-    
+
     const response = await fetchWithRetry(url, {
       method: 'POST',
       headers,
       body: formData,
     });
-    
+
     const result = await response.json();
-    
+
     return {
       modelId: model,
       response: result.text,
@@ -228,7 +225,7 @@ export const openaiProvider = {
         response_format: data.response_format || config.openai.whisper.defaultResponseFormat,
       },
     };
-  }
+  },
 };
 
 /**
@@ -247,13 +244,13 @@ export const stabilityProvider = {
 
     const engine = data.engine || config.stability.defaultEngine;
     const url = `${config.stability.baseUrl}/generation/${engine}/text-to-image`;
-    
+
     const requestBody = {
       text_prompts: [
         {
           text: data.prompt,
           weight: data.weight || 1.0,
-        }
+        },
       ],
       cfg_scale: data.cfg_scale !== undefined ? data.cfg_scale : config.stability.defaultCfgScale,
       height: data.height || config.stability.defaultHeight,
@@ -261,28 +258,28 @@ export const stabilityProvider = {
       steps: data.steps || config.stability.defaultSteps,
       samples: data.samples || 1,
     };
-    
+
     logger.debug(`Stability AI request: ${JSON.stringify(requestBody)}`);
-    
+
     const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${config.stability.apiKey}`,
+        Accept: 'application/json',
+        Authorization: `Bearer ${config.stability.apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
-    
+
     const result = await response.json();
-    
+
     // Process the images from base64 to usable format
     const images = result.artifacts.map(artifact => ({
       base64: artifact.base64,
       seed: artifact.seed,
       finishReason: artifact.finishReason,
     }));
-    
+
     return {
       modelId: engine,
       response: images,
@@ -296,7 +293,7 @@ export const stabilityProvider = {
         samples: requestBody.samples,
       },
     };
-  }
+  },
 };
 
 /**
@@ -315,19 +312,17 @@ export const anthropicProvider = {
 
     const model = data.model || config.anthropic.defaultModel;
     const url = `${config.anthropic.baseUrl}/v1/messages`;
-    
+
     const requestBody = {
       model,
-      messages: [
-        { role: 'user', content: data.prompt }
-      ],
+      messages: [{ role: 'user', content: data.prompt }],
       temperature: data.temperature !== undefined ? data.temperature : config.anthropic.temperature,
       max_tokens: data.max_tokens !== undefined ? data.max_tokens : config.anthropic.maxTokens,
       stream: false,
     };
-    
+
     logger.debug(`Anthropic API request: ${JSON.stringify(requestBody)}`);
-    
+
     const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
@@ -337,9 +332,9 @@ export const anthropicProvider = {
       },
       body: JSON.stringify(requestBody),
     });
-    
+
     const result = await response.json();
-    
+
     return {
       modelId: model,
       response: result.content[0].text,
@@ -351,7 +346,7 @@ export const anthropicProvider = {
       },
     };
   },
-  
+
   /**
    * Perform streaming inference with Anthropic Claude models
    * @param {Object} data - Input data for inference
@@ -364,19 +359,17 @@ export const anthropicProvider = {
 
     const model = data.model || config.anthropic.defaultModel;
     const url = `${config.anthropic.baseUrl}/v1/messages`;
-    
+
     const requestBody = {
       model,
-      messages: [
-        { role: 'user', content: data.prompt }
-      ],
+      messages: [{ role: 'user', content: data.prompt }],
       temperature: data.temperature !== undefined ? data.temperature : config.anthropic.temperature,
       max_tokens: data.max_tokens !== undefined ? data.max_tokens : config.anthropic.maxTokens,
       stream: true,
     };
-    
+
     logger.debug(`Anthropic API streaming request: ${JSON.stringify(requestBody)}`);
-    
+
     const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
@@ -386,9 +379,9 @@ export const anthropicProvider = {
       },
       body: JSON.stringify(requestBody),
     });
-    
+
     return response.body;
-  }
+  },
 };
 
 /**
@@ -410,7 +403,7 @@ export const huggingfaceProvider = {
     }
 
     const url = `${config.huggingface.baseUrl}/${data.model}`;
-    
+
     const requestBody = {
       inputs: data.prompt,
       parameters: {
@@ -421,20 +414,20 @@ export const huggingfaceProvider = {
       },
       options: data.options || {},
     };
-    
+
     logger.debug(`Hugging Face API request: ${JSON.stringify(requestBody)}`);
-    
+
     const response = await fetchWithRetry(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.huggingface.apiKey}`,
+        Authorization: `Bearer ${config.huggingface.apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
-    
+
     const result = await response.json();
-    
+
     return {
       modelId: data.model,
       response: result[0]?.generated_text || JSON.stringify(result),
@@ -442,7 +435,7 @@ export const huggingfaceProvider = {
       rawResponse: result,
       parameters: requestBody.parameters,
     };
-  }
+  },
 };
 
 /**
@@ -452,21 +445,25 @@ export const huggingfaceProvider = {
  */
 export function getProviderForModel(modelId) {
   // Map model IDs to their providers
-  if (modelId.startsWith('gpt-') || modelId === 'text-davinci-003' || modelId === 'text-davinci-002') {
+  if (
+    modelId.startsWith('gpt-') ||
+    modelId === 'text-davinci-003' ||
+    modelId === 'text-davinci-002'
+  ) {
     return openaiProvider;
   } else if (modelId === 'whisper' || modelId === 'whisper-1') {
     return {
       performInference: openaiProvider.transcribeAudio,
       performStreamingInference: async () => {
         throw new Error('Streaming is not supported for Whisper models');
-      }
+      },
     };
   } else if (modelId.startsWith('stable-diffusion')) {
     return {
       performInference: stabilityProvider.generateImage,
       performStreamingInference: async () => {
         throw new Error('Streaming is not supported for Stable Diffusion models');
-      }
+      },
     };
   } else if (modelId.startsWith('claude')) {
     return anthropicProvider;

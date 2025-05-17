@@ -14,6 +14,9 @@ importers:
       dotenv:
         specifier: ^16.3.1
         version: 16.5.0
+      form-data:
+        specifier: ^4.0.0
+        version: 4.0.2
       hono:
         specifier: ^4.7.9
         version: 4.7.9
@@ -23,6 +26,9 @@ importers:
       node-fetch:
         specifier: ^3.3.2
         version: 3.3.2
+      stream-transform:
+        specifier: ^3.2.10
+        version: 3.3.3
     devDependencies:
       chai:
         specifier: ^4.3.7
@@ -963,6 +969,9 @@ packages:
   slice-ansi@7.1.0:
     resolution: {integrity: sha512-bSiSngZ/jWeX93BqeIAbImyTbEihizcwNjFoRUIY/T1wWQsfsm2Vw1agPKylXvQTU7iASGdHhyqRlqQzfz+Htg==}
     engines: {node: '>=18'}
+
+  stream-transform@3.3.3:
+    resolution: {integrity: sha512-dALXrXe+uq4aO5oStdHKlfCM/b3NBdouigvxVPxCdrMRAU6oHh3KNss20VbTPQNQmjAHzZGKGe66vgwegFEIog==}
 
   string-argv@0.3.2:
     resolution: {integrity: sha512-aqD2Q0144Z+/RqG52NeHEkZauTAUWJO8c6yTftGJKO3Tja5tUgIfmIl6kExvhtxSDP7fXB6DvzkfMpCd/F3G+Q==}
@@ -2085,6 +2094,8 @@ snapshots:
     dependencies:
       ansi-styles: 6.2.1
       is-fullwidth-code-point: 5.0.0
+
+  stream-transform@3.3.3: {}
 
   string-argv@0.3.2: {}
 

@@ -17,6 +17,7 @@ This module provides a Craigslist search API that allows searching across all Cr
 Returns a list of all available Craigslist city site codes.
 
 **Response:**
+
 ```json
 {
   "count": 500,
@@ -29,6 +30,7 @@ Returns a list of all available Craigslist city site codes.
 Returns a list of all Craigslist categories and subcategories with their codes.
 
 **Response:**
+
 ```json
 {
   "categories": {
@@ -47,6 +49,7 @@ Returns a list of all Craigslist categories and subcategories with their codes.
 Searches Craigslist across multiple cities.
 
 **Request Body:**
+
 ```json
 {
   "query": "macbook pro",
@@ -62,6 +65,7 @@ Searches Craigslist across multiple cities.
 ```
 
 **Parameters:**
+
 - `query` (string, optional): Search query
 - `category` (string, optional): Category code to search in (e.g., "sya" for computers)
 - `cities` (array, optional): Array of city codes to search (empty for all cities)
@@ -69,6 +73,7 @@ Searches Craigslist across multiple cities.
 - `filters` (object, optional): Additional filters for the search
 
 **Response:**
+
 ```json
 {
   "query": "macbook pro",
@@ -98,6 +103,7 @@ Searches Craigslist across multiple cities.
 Gets detailed information about a specific Craigslist posting.
 
 **Request Body:**
+
 ```json
 {
   "url": "https://seattle.craigslist.org/see/sya/d/seattle-macbook-pro-16-2019/12345678.html"
@@ -105,9 +111,11 @@ Gets detailed information about a specific Craigslist posting.
 ```
 
 **Parameters:**
+
 - `url` (string, required): URL of the Craigslist posting
 
 **Response:**
+
 ```json
 {
   "details": {
@@ -142,6 +150,7 @@ This module provides an MCP tool that can be used by other modules or external c
 **Description:** Search across Craigslist sites with filtering by categories
 
 **Parameters:**
+
 - `query` (string, optional): Search query
 - `category` (string, optional): Category code to search in
 - `cities` (array, optional): Array of city codes to search (empty for all cities)
@@ -152,15 +161,15 @@ This module provides an MCP tool that can be used by other modules or external c
 
 Here are some common category codes you can use:
 
-| Category | Code | Description |
-|----------|------|-------------|
-| All For Sale | sss | All items for sale |
-| Community | ccc | Community events, activities, etc. |
-| Housing | hhh | Apartments, houses, etc. |
-| Jobs | jjj | Job listings |
-| Services | bbb | Services offered |
-| Gigs | ggg | Short-term work opportunities |
-| Discussion Forums | fff | Discussion forums |
+| Category          | Code | Description                        |
+| ----------------- | ---- | ---------------------------------- |
+| All For Sale      | sss  | All items for sale                 |
+| Community         | ccc  | Community events, activities, etc. |
+| Housing           | hhh  | Apartments, houses, etc.           |
+| Jobs              | jjj  | Job listings                       |
+| Services          | bbb  | Services offered                   |
+| Gigs              | ggg  | Short-term work opportunities      |
+| Discussion Forums | fff  | Discussion forums                  |
 
 For subcategories, refer to the `/craigslist/categories` endpoint.
 
@@ -168,67 +177,141 @@ For subcategories, refer to the `/craigslist/categories` endpoint.
 
 Here are some common filters you can use:
 
-| Filter | Description | Values |
-|--------|-------------|--------|
-| min_price | Minimum price | Number |
-| max_price | Maximum price | Number |
-| has_image | Only show posts with images | 1 (yes) |
-| postedToday | Only show posts from today | 1 (yes) |
-| bundleDuplicates | Bundle duplicate posts | 1 (yes) |
-| searchDistance | Search radius in miles | Number |
-| postal | Postal/ZIP code to search near | String |
+| Filter           | Description                    | Values  |
+| ---------------- | ------------------------------ | ------- |
+| min_price        | Minimum price                  | Number  |
+| max_price        | Maximum price                  | Number  |
+| has_image        | Only show posts with images    | 1 (yes) |
+| postedToday      | Only show posts from today     | 1 (yes) |
+| bundleDuplicates | Bundle duplicate posts         | 1 (yes) |
+| searchDistance   | Search radius in miles         | Number  |
+| postal           | Postal/ZIP code to search near | String  |
 
 ## Usage Examples
 
-### Basic Search
+### JavaScript Examples
+
+#### Basic Search
 
 ```javascript
 // Search for "bicycle" in Seattle and Portland
 const response = await fetch('/tools/craigslist', {
   method: 'POST',
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    query: "bicycle",
-    cities: ["seattle", "portland"],
-    category: "bia" // Bikes category
-  })
+    query: 'bicycle',
+    cities: ['seattle', 'portland'],
+    category: 'bia', // Bikes category
+  }),
 });
 
 const data = await response.json();
 console.log(`Found ${data.count} bicycles`);
 ```
 
-### Search with Filters
+#### Search with Filters
 
 ```javascript
 // Search for apartments in New York with price range
 const response = await fetch('/tools/craigslist', {
   method: 'POST',
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    category: "apa", // Apartments category
-    cities: ["newyork"],
+    category: 'apa', // Apartments category
+    cities: ['newyork'],
     filters: {
       min_price: 1500,
       max_price: 3000,
       bedrooms: 2,
       bathrooms: 1,
-      has_image: 1
-    }
-  })
+      has_image: 1,
+    },
+  }),
 });
 
 const data = await response.json();
 console.log(`Found ${data.count} apartments`);
 ```
 
+### cURL Examples
+
+#### Get All Cities
+
+```bash
+curl -X GET "http://localhost:3000/craigslist/cities"
+```
+
+#### Get All Categories
+
+```bash
+curl -X GET "http://localhost:3000/craigslist/categories"
+```
+
+#### Basic Search
+
+```bash
+curl -X POST "http://localhost:3000/craigslist/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "bicycle",
+    "cities": ["seattle", "portland"],
+    "category": "bia"
+  }'
+```
+
+#### Search with Filters
+
+```bash
+curl -X POST "http://localhost:3000/craigslist/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "category": "apa",
+    "cities": ["newyork"],
+    "filters": {
+      "min_price": 1500,
+      "max_price": 3000,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "has_image": 1
+    }
+  }'
+```
+
+#### Get Listing Details
+
+```bash
+curl -X POST "http://localhost:3000/craigslist/details" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://seattle.craigslist.org/see/sya/d/seattle-macbook-pro-16-2019/12345678.html"
+  }'
+```
+
+#### Using the MCP Tool
+
+```bash
+curl -X POST "http://localhost:3000/tools/craigslist" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "macbook pro",
+    "category": "sya",
+    "cities": ["seattle", "portland", "sfbay"],
+    "filters": {
+      "min_price": 500,
+      "max_price": 1500,
+      "has_image": 1
+    }
+  }'
+```
+
 ## Dependencies
 
 This module requires the following npm packages:
+
 - node-fetch
 - jsdom
 

@@ -12,7 +12,7 @@ import { config } from './config.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Transform } from 'stream-transform';
+import * as streamTransform from 'stream-transform';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -193,21 +193,19 @@ export function setupCoreRoutes(app) {
             // If we got a real stream, pipe it to the client
             // First convert the stream to SSE format if needed
             const stream = result.response;
-            
-            // Create a new Transform stream to convert the provider's stream format to SSE
-            const transform = new Transform({
-              transform(chunk, controller) {
-                // Convert chunk to string if it's a buffer
-                const data = chunk instanceof Buffer ? chunk.toString() : chunk;
-                
-                // Format as SSE
-                controller.enqueue(`data: ${data}\n\n`);
-              }
+
+            // Create a new transform stream to convert the provider's stream format to SSE
+            const transformStream = streamTransform(function (chunk, callback) {
+              // Convert chunk to string if it's a buffer
+              const data = chunk instanceof Buffer ? chunk.toString() : chunk;
+
+              // Format as SSE
+              callback(null, `data: ${data}\n\n`);
             });
-            
+
             // Pipe the provider's stream through our transformer
-            const transformedStream = stream.pipe(transform);
-            
+            const transformedStream = stream.pipe(transformStream);
+
             // Return the transformed stream
             return c.body(transformedStream);
           } else {
@@ -265,21 +263,19 @@ export function setupCoreRoutes(app) {
             // If we got a real stream, pipe it to the client
             // First convert the stream to SSE format if needed
             const stream = result.response;
-            
-            // Create a new Transform stream to convert the provider's stream format to SSE
-            const transform = new Transform({
-              transform(chunk, controller) {
-                // Convert chunk to string if it's a buffer
-                const data = chunk instanceof Buffer ? chunk.toString() : chunk;
-                
-                // Format as SSE
-                controller.enqueue(`data: ${data}\n\n`);
-              }
+
+            // Create a new transform stream to convert the provider's stream format to SSE
+            const transformStream = streamTransform(function (chunk, callback) {
+              // Convert chunk to string if it's a buffer
+              const data = chunk instanceof Buffer ? chunk.toString() : chunk;
+
+              // Format as SSE
+              callback(null, `data: ${data}\n\n`);
             });
-            
+
             // Pipe the provider's stream through our transformer
-            const transformedStream = stream.pipe(transform);
-            
+            const transformedStream = stream.pipe(transformStream);
+
             // Return the transformed stream
             return c.body(transformedStream);
           } else {
