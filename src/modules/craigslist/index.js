@@ -8,7 +8,7 @@
 import { logger } from '../../utils/logger.js';
 import cities from './cities.js';
 import categories from './categories.js';
-import { searchMultipleCities, getPostingDetails } from './api.js';
+import { search, getPostingDetails } from './api.js';
 
 /**
  * Register this module with the Hono app
@@ -67,7 +67,7 @@ export async function register(app) {
       };
 
       // Perform the search
-      const results = await searchMultipleCities(citiesToSearch, searchOptions);
+      const results = await search(citiesToSearch, searchOptions);
 
       return c.json({
         query: params.query,
@@ -185,7 +185,7 @@ export async function register(app) {
       };
 
       // Perform the search
-      const results = await searchMultipleCities(citiesToSearch, searchOptions);
+      const results = await search(citiesToSearch, searchOptions);
 
       return c.json({
         tool: 'craigslist',

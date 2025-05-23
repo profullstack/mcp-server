@@ -1,13 +1,13 @@
-# MCP Server (Model Control Protocol)
+# MCP Server (Model Context Protocol)
 
-A generic, modular server for implementing the Model Control Protocol (MCP). This server provides a framework for controlling and interacting with various models through a standardized API.
+A generic, modular server for implementing the Model Context Protocol (MCP). This server provides a framework for controlling and interacting with various models through a standardized API.
 
 ## Features
 
 - Modular architecture for easy extension
 - Dynamic module loading
 - Core model management functionality
-- Standardized API for model control
+- Standardized API for model context
 - Simple configuration system
 - Logging utilities
 - Enhanced module structure with proper separation of concerns
@@ -80,6 +80,7 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
 You can get these API keys from:
+
 - OpenAI: https://platform.openai.com/api-keys
 - Stability AI: https://platform.stability.ai/account/keys
 - Anthropic: https://console.anthropic.com/settings/keys
@@ -177,13 +178,13 @@ The MCP server implements a standardized set of methods that all MCP servers sho
 
 The MCP server supports the following model types:
 
-| Model Type | Provider | Capabilities | Example IDs |
-|------------|----------|--------------|-------------|
-| GPT Models | OpenAI | Text generation | gpt-4, gpt-3.5-turbo |
-| Whisper | OpenAI | Speech-to-text | whisper, whisper-1 |
-| Stable Diffusion | Stability AI | Image generation | stable-diffusion-xl-1024-v1-0 |
-| Claude Models | Anthropic | Text generation | claude-3-opus, claude-3-sonnet |
-| Custom Models | Hugging Face | Various | (any Hugging Face model ID) |
+| Model Type       | Provider     | Capabilities     | Example IDs                    |
+| ---------------- | ------------ | ---------------- | ------------------------------ |
+| GPT Models       | OpenAI       | Text generation  | gpt-4, gpt-3.5-turbo           |
+| Whisper          | OpenAI       | Speech-to-text   | whisper, whisper-1             |
+| Stable Diffusion | Stability AI | Image generation | stable-diffusion-xl-1024-v1-0  |
+| Claude Models    | Anthropic    | Text generation  | claude-3-opus, claude-3-sonnet |
+| Custom Models    | Hugging Face | Various          | (any Hugging Face model ID)    |
 
 #### Inference Examples
 
@@ -257,15 +258,15 @@ Configuration is loaded from environment variables and stored in `src/core/confi
 
 Key environment variables include:
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| PORT | Server port | 3000 |
-| HOST | Server host | localhost |
-| NODE_ENV | Environment (development/production) | development |
-| OPENAI_API_KEY | OpenAI API key | (required for OpenAI models) |
-| STABILITY_API_KEY | Stability AI API key | (required for Stable Diffusion) |
-| ANTHROPIC_API_KEY | Anthropic API key | (required for Claude models) |
-| HUGGINGFACE_API_KEY | Hugging Face API key | (required for Hugging Face models) |
+| Variable            | Description                          | Default                            |
+| ------------------- | ------------------------------------ | ---------------------------------- |
+| PORT                | Server port                          | 3000                               |
+| HOST                | Server host                          | localhost                          |
+| NODE_ENV            | Environment (development/production) | development                        |
+| OPENAI_API_KEY      | OpenAI API key                       | (required for OpenAI models)       |
+| STABILITY_API_KEY   | Stability AI API key                 | (required for Stable Diffusion)    |
+| ANTHROPIC_API_KEY   | Anthropic API key                    | (required for Claude models)       |
+| HUGGINGFACE_API_KEY | Hugging Face API key                 | (required for Hugging Face models) |
 
 See `sample.env` for a complete list of configuration options.
 
@@ -436,8 +437,8 @@ const response = await fetch('http://localhost:3000/model/infer', {
   body: JSON.stringify({
     prompt: 'Write a poem about artificial intelligence',
     temperature: 0.7,
-    max_tokens: 200
-  })
+    max_tokens: 200,
+  }),
 });
 
 // Speech-to-text example (requires multipart form data)
@@ -448,7 +449,7 @@ formData.append('language', 'en');
 
 const response = await fetch('http://localhost:3000/model/whisper/infer', {
   method: 'POST',
-  body: formData
+  body: formData,
 });
 ```
 
@@ -465,8 +466,8 @@ const response = await fetch('http://localhost:3000/model/infer', {
     height: 1024,
     width: 1024,
     steps: 30,
-    cfg_scale: 7
-  })
+    cfg_scale: 7,
+  }),
 });
 
 // The response includes base64-encoded images
@@ -485,8 +486,8 @@ const response = await fetch('http://localhost:3000/model/infer', {
   body: JSON.stringify({
     prompt: 'Explain how neural networks work',
     temperature: 0.5,
-    max_tokens: 300
-  })
+    max_tokens: 300,
+  }),
 });
 ```
 
@@ -502,8 +503,8 @@ const response = await fetch('http://localhost:3000/model/custom-model-name/infe
     prompt: 'Input for the model',
     parameters: {
       // Model-specific parameters
-    }
-  })
+    },
+  }),
 });
 ```
 
