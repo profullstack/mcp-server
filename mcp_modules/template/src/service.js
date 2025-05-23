@@ -1,6 +1,6 @@
 /**
  * Template Module Service
- * 
+ *
  * This file contains the main business logic for the template module.
  */
 
@@ -48,7 +48,7 @@ export class TemplateService {
 
     const item = {
       ...data,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     this.items.set(id, item);
@@ -70,7 +70,7 @@ export class TemplateService {
     const updatedItem = {
       ...existingItem,
       ...data,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     this.items.set(id, updatedItem);
@@ -108,7 +108,7 @@ export class TemplateService {
       ...item,
       processed: true,
       processedAt: new Date().toISOString(),
-      result: processString(item.id)
+      result: processString(item.id),
     };
 
     this.items.set(id, processedItem);

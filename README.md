@@ -286,7 +286,7 @@ node examples/client.js
 To use the custom module example, copy it to the modules directory:
 
 ```bash
-cp -r examples/custom-module src/modules/calculator
+cp -r examples/custom-module mcp_modules/calculator
 ```
 
 ## Creating Modules
@@ -298,7 +298,7 @@ Modules are the primary way to extend the MCP server. Each module is a self-cont
 Modules now follow an enhanced structure with better organization:
 
 ```
-src/modules/your-module/
+mcp_modules/your-module/
 ├── assets/          # Static assets (images, CSS, etc.)
 ├── docs/            # Documentation files
 ├── examples/        # Example usage
@@ -351,10 +351,10 @@ export const metadata = {
 
 ### Example Modules
 
-- A simple example module is provided in `src/modules/example/` to demonstrate how to create a module.
+- A simple example module is provided in `mcp_modules/example/` to demonstrate how to create a module.
 - A more complex example with a calculator tool is provided in `examples/custom-module/`.
-- A health check module is provided in `src/modules/health-check/` for system monitoring.
-- A template for creating new modules is available in `src/modules/template/`.
+- A health check module is provided in `mcp_modules/health-check/` for system monitoring.
+- A template for creating new modules is available in `mcp_modules/template/`.
 
 ### Creating New Modules
 
@@ -370,7 +370,7 @@ pnpm create-module my-module
 
 The script will:
 
-1. Create a new module directory in `src/modules/`
+1. Create a new module directory in `mcp_modules/`
 2. Copy the template files
 3. Replace placeholders with your module information
 4. Provide next steps for implementing your module

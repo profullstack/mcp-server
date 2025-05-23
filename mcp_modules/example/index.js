@@ -1,4 +1,4 @@
-import { logger } from '../../utils/logger.js';
+import { logger } from '../../src/utils/logger.js';
 
 /**
  * Example module that demonstrates how to create a module for the MCP server
@@ -10,17 +10,17 @@ import { logger } from '../../utils/logger.js';
  */
 export async function register(app) {
   logger.info('Registering example module');
-  
+
   // Register routes
-  app.get('/example', (c) => {
+  app.get('/example', c => {
     return c.json({
       module: 'example',
       status: 'active',
-      message: 'This is an example module'
+      message: 'This is an example module',
     });
   });
-  
-  app.get('/example/info', (c) => {
+
+  app.get('/example/info', c => {
     return c.json({
       name: 'Example Module',
       version: '1.0.0',
@@ -28,24 +28,24 @@ export async function register(app) {
       endpoints: [
         { path: '/example', method: 'GET', description: 'Get module status' },
         { path: '/example/info', method: 'GET', description: 'Get module information' },
-        { path: '/example/echo', method: 'POST', description: 'Echo back the request body' }
-      ]
+        { path: '/example/echo', method: 'POST', description: 'Echo back the request body' },
+      ],
     });
   });
-  
-  app.post('/example/echo', async (c) => {
+
+  app.post('/example/echo', async c => {
     try {
       const body = await c.req.json();
       return c.json({
         module: 'example',
         echo: body,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       return c.json({ error: 'Invalid JSON body' }, 400);
     }
   });
-  
+
   logger.info('Example module registered successfully');
 }
 

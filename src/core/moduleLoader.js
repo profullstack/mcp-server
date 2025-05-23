@@ -20,7 +20,7 @@ export const moduleState = {
  */
 export async function loadModules(app) {
   try {
-    const modulesDir = path.resolve(__dirname, '..', 'modules');
+    const modulesDir = path.resolve(__dirname, '..', '..', 'mcp_modules');
 
     // Check if modules directory exists
     if (!fs.existsSync(modulesDir)) {
@@ -89,7 +89,7 @@ export async function getModulesInfo() {
       return global.testOverrides.moduleLoader.getModulesInfo();
     }
 
-    const modulesDir = path.resolve(__dirname, '..', 'modules');
+    const modulesDir = path.resolve(__dirname, '..', '..', 'mcp_modules');
 
     if (!fs.existsSync(modulesDir)) {
       return [];

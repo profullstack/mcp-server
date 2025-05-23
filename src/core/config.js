@@ -23,7 +23,7 @@ export const config = {
     host: process.env.HOST || 'localhost',
     env: process.env.NODE_ENV || 'development',
   },
-  
+
   // Default model settings
   model: {
     defaultTimeout: parseNum(process.env.MODEL_TIMEOUT, 30000), // 30 seconds
@@ -33,7 +33,7 @@ export const config = {
     maxRetries: parseNum(process.env.MAX_RETRIES, 3),
     retryDelay: parseNum(process.env.RETRY_DELAY_MS, 1000),
   },
-  
+
   // OpenAI API configuration (for GPT-4 and Whisper)
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
@@ -50,7 +50,7 @@ export const config = {
       defaultResponseFormat: process.env.WHISPER_DEFAULT_RESPONSE_FORMAT || 'json',
     },
   },
-  
+
   // Stability AI configuration (for Stable Diffusion)
   stability: {
     apiKey: process.env.STABILITY_API_KEY,
@@ -61,7 +61,7 @@ export const config = {
     defaultWidth: parseNum(process.env.STABILITY_DEFAULT_WIDTH, 1024),
     defaultHeight: parseNum(process.env.STABILITY_DEFAULT_HEIGHT, 1024),
   },
-  
+
   // Anthropic API configuration (optional)
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY,
@@ -71,13 +71,13 @@ export const config = {
     maxTokens: parseNum(process.env.ANTHROPIC_MAX_TOKENS, 4096),
     temperature: parseFloat(process.env.ANTHROPIC_TEMPERATURE || '0.7'),
   },
-  
+
   // Hugging Face API configuration (optional)
   huggingface: {
     apiKey: process.env.HUGGINGFACE_API_KEY,
     baseUrl: process.env.HUGGINGFACE_API_BASE_URL || 'https://api-inference.huggingface.co/models',
   },
-  
+
   // Proxy settings
   proxy: {
     enabled: parseBool(process.env.USE_PROXY, false),
@@ -85,7 +85,7 @@ export const config = {
     https: process.env.HTTPS_PROXY,
     noProxy: process.env.NO_PROXY,
   },
-  
+
   // Cache settings
   cache: {
     redis: {
@@ -96,19 +96,19 @@ export const config = {
       ttl: parseNum(process.env.REDIS_TTL, 3600),
     },
   },
-  
+
   // Module settings
   modules: {
-    directory: process.env.MODULES_DIRECTORY || './src/modules',
+    directory: process.env.MODULES_DIRECTORY || './mcp_modules',
     autoload: parseBool(process.env.MODULES_AUTOLOAD, true),
   },
-  
+
   // Logging configuration
   logging: {
     level: process.env.LOG_LEVEL || 'info',
     format: process.env.LOG_FORMAT || 'json',
   },
-  
+
   // Monitoring settings
   monitoring: {
     metrics: {
@@ -116,7 +116,7 @@ export const config = {
       port: parseNum(process.env.METRICS_PORT, 9090),
     },
   },
-  
+
   // Security settings
   security: {
     cors: {
@@ -128,7 +128,7 @@ export const config = {
       windowMs: parseNum(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000), // 15 minutes
       max: parseNum(process.env.RATE_LIMIT_MAX, 100), // limit each IP to 100 requests per windowMs
     },
-  }
+  },
 };
 
 // Log the configuration in development mode

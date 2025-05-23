@@ -17,6 +17,7 @@ Retrieves a list of all items.
 **Method**: `GET`
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -45,9 +46,11 @@ Retrieves a specific item by its ID.
 **Method**: `GET`
 
 **URL Parameters**:
+
 - `id` - The ID of the item to retrieve
 
 **Success Response**:
+
 ```json
 {
   "success": true,
@@ -61,6 +64,7 @@ Retrieves a specific item by its ID.
 ```
 
 **Error Response**:
+
 ```json
 {
   "success": false,
@@ -77,6 +81,7 @@ Creates a new item.
 **Method**: `POST`
 
 **Request Body**:
+
 ```json
 {
   "id": "item3",
@@ -87,6 +92,7 @@ Creates a new item.
 ```
 
 **Success Response**:
+
 ```json
 {
   "success": true,
@@ -102,6 +108,7 @@ Creates a new item.
 ```
 
 **Error Response**:
+
 ```json
 {
   "success": false,
@@ -118,9 +125,11 @@ Updates an existing item.
 **Method**: `PUT`
 
 **URL Parameters**:
+
 - `id` - The ID of the item to update
 
 **Request Body**:
+
 ```json
 {
   "name": "Updated Item",
@@ -129,6 +138,7 @@ Updates an existing item.
 ```
 
 **Success Response**:
+
 ```json
 {
   "success": true,
@@ -144,6 +154,7 @@ Updates an existing item.
 ```
 
 **Error Response**:
+
 ```json
 {
   "success": false,
@@ -160,9 +171,11 @@ Deletes an item.
 **Method**: `DELETE`
 
 **URL Parameters**:
+
 - `id` - The ID of the item to delete
 
 **Success Response**:
+
 ```json
 {
   "success": true,
@@ -171,6 +184,7 @@ Deletes an item.
 ```
 
 **Error Response**:
+
 ```json
 {
   "success": false,
@@ -187,9 +201,11 @@ Processes an item.
 **Method**: `POST`
 
 **URL Parameters**:
+
 - `id` - The ID of the item to process
 
 **Success Response**:
+
 ```json
 {
   "success": true,
@@ -206,6 +222,7 @@ Processes an item.
 ```
 
 **Error Response**:
+
 ```json
 {
   "success": false,
@@ -222,25 +239,28 @@ The Template Module also provides an MCP tool that can be used by other modules.
 **Description**: Perform operations on template items
 
 **Parameters**:
+
 - `action` (string, required): The action to perform (create, get, update, delete, process)
 - `id` (string, optional): The ID of the item for get, update, delete, and process actions
 - `item` (object, optional): The item data for create and update actions
 
 **Example Usage**:
+
 ```javascript
 const result = await useTemplateModule({
   action: 'create',
   item: {
     id: 'mcp-example',
     name: 'MCP Example Item',
-    value: 100
-  }
+    value: 100,
+  },
 });
 ```
 
 ## Error Handling
 
 All endpoints return appropriate HTTP status codes:
+
 - `200` - Success
 - `201` - Created
 - `400` - Bad Request

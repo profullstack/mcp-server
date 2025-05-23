@@ -20,8 +20,8 @@ export const categories = {
       pets: { name: 'Pets', code: 'pet' },
       politics: { name: 'Politics', code: 'pol' },
       rideshare: { name: 'Rideshare', code: 'rid' },
-      volunteers: { name: 'Volunteers', code: 'vol' }
-    }
+      volunteers: { name: 'Volunteers', code: 'vol' },
+    },
   },
   housing: {
     name: 'Housing',
@@ -36,8 +36,8 @@ export const categories = {
       rooms: { name: 'Rooms / Shared', code: 'roo' },
       roomWanted: { name: 'Room Wanted', code: 'sha' },
       sublets: { name: 'Sublets / Temporary', code: 'sub' },
-      vacation: { name: 'Vacation Rentals', code: 'vac' }
-    }
+      vacation: { name: 'Vacation Rentals', code: 'vac' },
+    },
   },
   jobs: {
     name: 'Jobs',
@@ -73,8 +73,8 @@ export const categories = {
       tv: { name: 'TV / Film / Video', code: 'tfr' },
       web: { name: 'Web / Info Design', code: 'web' },
       writing: { name: 'Writing / Editing', code: 'wri' },
-      etc: { name: 'Et cetera', code: 'etc' }
-    }
+      etc: { name: 'Et cetera', code: 'etc' },
+    },
   },
   services: {
     name: 'Services',
@@ -101,8 +101,8 @@ export const categories = {
       smallBiz: { name: 'Sm Biz Ads', code: 'biz' },
       therapeutic: { name: 'Therapeutic', code: 'thp' },
       travel: { name: 'Travel/Vac', code: 'trv' },
-      write: { name: 'Write/Ed/Tran', code: 'wet' }
-    }
+      write: { name: 'Write/Ed/Tran', code: 'wet' },
+    },
   },
   forSale: {
     name: 'For Sale',
@@ -145,8 +145,8 @@ export const categories = {
       toys: { name: 'Toys & Games', code: 'taa' },
       trailers: { name: 'Trailers', code: 'tra' },
       videoGaming: { name: 'Video Gaming', code: 'vga' },
-      wanted: { name: 'Wanted', code: 'waa' }
-    }
+      wanted: { name: 'Wanted', code: 'waa' },
+    },
   },
   discussion: {
     name: 'Discussion Forums',
@@ -205,8 +205,8 @@ export const categories = {
       tv: { name: 'TV', code: 'tel' },
       vegan: { name: 'Vegan', code: 'veg' },
       words: { name: 'Words', code: 'wor' },
-      writing: { name: 'Writing', code: 'wri' }
-    }
+      writing: { name: 'Writing', code: 'wri' },
+    },
   },
   gigs: {
     name: 'Gigs',
@@ -219,26 +219,29 @@ export const categories = {
       event: { name: 'Event', code: 'evg' },
       labor: { name: 'Labor', code: 'lbg' },
       talent: { name: 'Talent', code: 'tlg' },
-      writing: { name: 'Writing', code: 'wrg' }
-    }
+      writing: { name: 'Writing', code: 'wrg' },
+    },
   },
   resumes: {
     name: 'Resumes',
     code: 'rrr',
-    subcategories: {}
-  }
+    subcategories: {},
+  },
 };
 
 // Flat list of all categories with their codes
 export const allCategories = Object.entries(categories).reduce((acc, [key, category]) => {
   // Add main category
   acc[key] = { name: category.name, code: category.code };
-  
+
   // Add all subcategories
   Object.entries(category.subcategories).forEach(([subKey, subCategory]) => {
-    acc[`${key}_${subKey}`] = { name: `${category.name} - ${subCategory.name}`, code: subCategory.code };
+    acc[`${key}_${subKey}`] = {
+      name: `${category.name} - ${subCategory.name}`,
+      code: subCategory.code,
+    };
   });
-  
+
   return acc;
 }, {});
 

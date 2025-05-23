@@ -1,6 +1,6 @@
 /**
  * Template Module Controller
- * 
+ *
  * This file contains the route handlers for the template module.
  */
 
@@ -17,13 +17,16 @@ export async function getAllItems(c) {
     return c.json({
       success: true,
       count: items.length,
-      items
+      items,
     });
   } catch (error) {
-    return c.json({
-      success: false,
-      error: error.message
-    }, 500);
+    return c.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      500
+    );
   }
 }
 
@@ -36,20 +39,26 @@ export async function getItemById(c) {
   try {
     const { id } = c.req.param();
     const item = templateService.getItemById(id);
-    
+
     if (!item) {
-      return c.json({
-        success: false,
-        error: `Item with ID ${id} not found`
-      }, 404);
+      return c.json(
+        {
+          success: false,
+          error: `Item with ID ${id} not found`,
+        },
+        404
+      );
     }
-    
+
     return c.json(templateService.formatItemResponse(item));
   } catch (error) {
-    return c.json({
-      success: false,
-      error: error.message
-    }, 500);
+    return c.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      500
+    );
   }
 }
 
@@ -62,17 +71,23 @@ export async function createItem(c) {
   try {
     const data = await c.req.json();
     const item = templateService.createItem(data);
-    
-    return c.json({
-      success: true,
-      message: 'Item created successfully',
-      item
-    }, 201);
+
+    return c.json(
+      {
+        success: true,
+        message: 'Item created successfully',
+        item,
+      },
+      201
+    );
   } catch (error) {
-    return c.json({
-      success: false,
-      error: error.message
-    }, 400);
+    return c.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      400
+    );
   }
 }
 
@@ -86,17 +101,20 @@ export async function updateItem(c) {
     const { id } = c.req.param();
     const data = await c.req.json();
     const item = templateService.updateItem(id, data);
-    
+
     return c.json({
       success: true,
       message: 'Item updated successfully',
-      item
+      item,
     });
   } catch (error) {
-    return c.json({
-      success: false,
-      error: error.message
-    }, error.message.includes('not found') ? 404 : 400);
+    return c.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      error.message.includes('not found') ? 404 : 400
+    );
   }
 }
 
@@ -109,23 +127,29 @@ export async function deleteItem(c) {
   try {
     const { id } = c.req.param();
     const deleted = templateService.deleteItem(id);
-    
+
     if (!deleted) {
-      return c.json({
-        success: false,
-        error: `Item with ID ${id} not found`
-      }, 404);
+      return c.json(
+        {
+          success: false,
+          error: `Item with ID ${id} not found`,
+        },
+        404
+      );
     }
-    
+
     return c.json({
       success: true,
-      message: 'Item deleted successfully'
+      message: 'Item deleted successfully',
     });
   } catch (error) {
-    return c.json({
-      success: false,
-      error: error.message
-    }, 500);
+    return c.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      500
+    );
   }
 }
 
@@ -138,16 +162,19 @@ export async function processItem(c) {
   try {
     const { id } = c.req.param();
     const processedItem = await templateService.processItem(id);
-    
+
     return c.json({
       success: true,
       message: 'Item processed successfully',
-      item: processedItem
+      item: processedItem,
     });
   } catch (error) {
-    return c.json({
-      success: false,
-      error: error.message
-    }, error.message.includes('not found') ? 404 : 500);
+    return c.json(
+      {
+        success: false,
+        error: error.message,
+      },
+      error.message.includes('not found') ? 404 : 500
+    );
   }
 }

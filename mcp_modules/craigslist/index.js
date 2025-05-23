@@ -5,7 +5,7 @@
  * all Craigslist sites with filtering by categories and other options.
  */
 
-import { logger } from '../../utils/logger.js';
+import { logger } from '../../src/utils/logger.js';
 import cities from './cities.js';
 import categories from './categories.js';
 import { search, getPostingDetails } from './api.js';

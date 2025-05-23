@@ -1,6 +1,6 @@
 /**
  * Template Module Utilities
- * 
+ *
  * This file contains utility functions for the template module.
  */
 
@@ -19,7 +19,7 @@ export function processString(input) {
  * @returns {Promise<string>} Result after delay
  */
 export async function delayedResponse(delay = 1000) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     setTimeout(() => {
       resolve(`Response after ${delay}ms`);
     }, delay);
@@ -35,7 +35,7 @@ export function validateData(data) {
   if (!data) return false;
   if (typeof data !== 'object') return false;
   if (!data.id) return false;
-  
+
   return true;
 }
 
@@ -48,6 +48,6 @@ export function formatResponse(data) {
   return {
     success: true,
     timestamp: new Date().toISOString(),
-    data
+    data,
   };
 }

@@ -12,7 +12,7 @@ services:
       - PORT=3000
     restart: unless-stopped
     volumes:
-      - ./src/modules:/app/src/modules
+      - ./mcp_modules:/app/mcp_modules
     healthcheck:
       test: ["CMD", "wget", "--spider", "http://localhost:3000/health"]
       interval: 30s

@@ -22,9 +22,9 @@ test-module/
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/test-module` | GET | Get module information |
+| Endpoint       | Method | Description            |
+| -------------- | ------ | ---------------------- |
+| `/test-module` | GET    | Get module information |
 
 ## Usage
 

@@ -499,5 +499,5 @@ export default [
   'accra',
   'kenya',
   'casablanca',
-  'tunis'
+  'tunis',
 ];

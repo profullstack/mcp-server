@@ -32,16 +32,16 @@ template/
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/template` | GET | Get module information |
-| `/template/items` | GET | Get all items |
-| `/template/items/:id` | GET | Get item by ID |
-| `/template/items` | POST | Create a new item |
-| `/template/items/:id` | PUT | Update an item |
-| `/template/items/:id` | DELETE | Delete an item |
-| `/template/items/:id/process` | POST | Process an item |
-| `/tools/template` | POST | Template tool endpoint |
+| Endpoint                      | Method | Description            |
+| ----------------------------- | ------ | ---------------------- |
+| `/template`                   | GET    | Get module information |
+| `/template/items`             | GET    | Get all items          |
+| `/template/items/:id`         | GET    | Get item by ID         |
+| `/template/items`             | POST   | Create a new item      |
+| `/template/items/:id`         | PUT    | Update an item         |
+| `/template/items/:id`         | DELETE | Delete an item         |
+| `/template/items/:id/process` | POST   | Process an item        |
+| `/tools/template`             | POST   | Template tool endpoint |
 
 For detailed API documentation, see [docs/api.md](docs/api.md).
 
@@ -56,8 +56,8 @@ const result = await useTemplateModule({
   item: {
     id: 'mcp-example',
     name: 'MCP Example Item',
-    value: 100
-  }
+    value: 100,
+  },
 });
 ```
 
@@ -72,13 +72,13 @@ Basic example:
 const createResponse = await fetch('http://localhost:3000/template/items', {
   method: 'POST',
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   },
   body: JSON.stringify({
     id: 'example1',
     name: 'Example Item',
-    description: 'This is an example item'
-  })
+    description: 'This is an example item',
+  }),
 });
 
 // Get all items
@@ -102,11 +102,13 @@ pnpm test:modules
 ```
 
 The tests include:
+
 - Unit tests for the service layer
 - Controller tests with request/response mocking
 - Integration tests for the API endpoints
 
 The testing infrastructure uses:
+
 - Mocha as the test runner
 - Chai for assertions
 - Sinon for mocking and stubbing
@@ -122,7 +124,7 @@ describe('TemplateService', () => {
   it('should return all items', () => {
     const service = new TemplateService();
     service.createItem({ id: 'test1', name: 'Test 1' });
-    
+
     const items = service.getAllItems();
     expect(items).to.be.an('array').with.lengthOf(1);
     expect(items[0].id).to.equal('test1');
@@ -154,11 +156,7 @@ This module includes a package.json file with:
   "scripts": {
     "test": "mocha test/**/*.test.js"
   },
-  "keywords": [
-    "mcp",
-    "module",
-    "template"
-  ],
+  "keywords": ["mcp", "module", "template"],
   "author": "Your Name",
   "license": "ISC",
   "engines": {
@@ -178,6 +176,7 @@ When creating a new module, make sure to update the package.json with your modul
 ## Dependencies
 
 This module requires:
+
 - Hono framework (provided by the MCP server)
 - Node.js v18 or higher
 - Mocha, Chai, and Sinon for testing (as dev dependencies)

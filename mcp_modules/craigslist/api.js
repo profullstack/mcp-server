@@ -7,7 +7,7 @@
 
 import fetch from 'node-fetch';
 import { JSDOM } from 'jsdom';
-import { logger } from '../../utils/logger.js';
+import { logger } from '../../src/utils/logger.js';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';

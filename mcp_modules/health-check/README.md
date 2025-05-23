@@ -10,10 +10,10 @@ This module provides detailed health check endpoints for the MCP server. It moni
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health/detailed` | GET | Get detailed health information about the server, including system resources, models, and modules |
-| `/system/info` | GET | Get system information including CPU, memory, and OS details |
+| Endpoint           | Method | Description                                                                                       |
+| ------------------ | ------ | ------------------------------------------------------------------------------------------------- |
+| `/health/detailed` | GET    | Get detailed health information about the server, including system resources, models, and modules |
+| `/system/info`     | GET    | Get system information including CPU, memory, and OS details                                      |
 
 ## Usage Examples
 
@@ -26,6 +26,7 @@ fetch('http://localhost:3000/health/detailed')
 ```
 
 Example response:
+
 ```json
 {
   "health": {
@@ -73,6 +74,7 @@ fetch('http://localhost:3000/system/info')
 ```
 
 Example response:
+
 ```json
 {
   "platform": "linux",

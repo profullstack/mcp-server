@@ -74,7 +74,7 @@ describe('Module Loader', () => {
       });
 
       // Stub path.resolve to return predictable paths
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Mock the fs.readdirSync to return mock module directories
       // This is a simpler approach that doesn't require stubbing dynamic imports
@@ -122,7 +122,7 @@ describe('Module Loader', () => {
       sandbox.stub(fs, 'readdirSync').returns(mockDirents);
 
       // Stub path.resolve to return a predictable path
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Stub path.join to return predictable paths
       const originalJoin = path.join;
@@ -160,7 +160,7 @@ describe('Module Loader', () => {
       sandbox.stub(fs, 'readdirSync').returns(mockDirents);
 
       // Stub path.resolve to return a predictable path
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Call the function under test
       await loadModules(mockApp);
@@ -179,7 +179,7 @@ describe('Module Loader', () => {
       sandbox.stub(fs, 'readdirSync').returns(mockDirents);
 
       // Stub path.resolve to return a predictable path
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Stub path.join to return predictable paths
       const originalJoin = path.join;
@@ -209,13 +209,13 @@ describe('Module Loader', () => {
       sandbox.stub(fs, 'existsSync').returns(false);
 
       // Stub path.resolve to return a predictable path
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Call the function under test
       await loadModules(mockApp);
 
       // Verify that the logger was called with the expected warning
-      expect(logger.warn.calledWith('Modules directory not found: /mock/path/to/modules')).to.be
+      expect(logger.warn.calledWith('Modules directory not found: /mock/path/to/mcp_modules')).to.be
         .true;
     });
   });
@@ -233,7 +233,7 @@ describe('Module Loader', () => {
       sandbox.stub(fs, 'readdirSync').returns(mockDirents);
 
       // Stub path.resolve to return a predictable path
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Stub path.join to return predictable paths
       const originalJoin = path.join;
@@ -301,7 +301,7 @@ describe('Module Loader', () => {
       sandbox.stub(fs, 'readdirSync').returns(mockDirents);
 
       // Stub path.resolve to return a predictable path
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Stub path.join to return predictable paths
       const originalJoin = path.join;
@@ -330,7 +330,7 @@ describe('Module Loader', () => {
       sandbox.stub(fs, 'existsSync').returns(false);
 
       // Stub path.resolve to return a predictable path
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Call the function under test
       const modulesInfo = await getModulesInfo();
@@ -348,7 +348,7 @@ describe('Module Loader', () => {
       sandbox.stub(fs, 'readdirSync').returns(mockDirents);
 
       // Stub path.resolve to return a predictable path
-      sandbox.stub(path, 'resolve').returns('/mock/path/to/modules');
+      sandbox.stub(path, 'resolve').returns('/mock/path/to/mcp_modules');
 
       // Stub path.join to return predictable paths
       const originalJoin = path.join;

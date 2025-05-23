@@ -54,7 +54,7 @@ Please include the following in your pull request:
 ## Project Structure
 
 - `src/core/` - Core functionality
-- `src/modules/` - Modules that extend the server
+- `mcp_modules/` - Modules that extend the server
 - `src/utils/` - Utility functions
 - `examples/` - Example code
 - `docs/` - Documentation
