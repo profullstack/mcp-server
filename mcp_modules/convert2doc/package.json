@@ -1,0 +1,36 @@
+{
+  "name": "mcp-module-convert2doc",
+  "version": "1.0.0",
+  "description": "Document conversion module using convert2doc.com API for converting between various document formats",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js --timeout 10000"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "convert2doc",
+    "document",
+    "conversion",
+    "pdf",
+    "docx",
+    "markdown",
+    "html",
+    "epub",
+    "pandoc"
+  ],
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  }
+}
