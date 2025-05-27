@@ -12,7 +12,7 @@ Restart=on-failure
 RestartSec=5
 StandardOutput=append:/var/log/mcp-server.log
 StandardError=append:/var/log/mcp-server-error.log
-EnvironmentFile=/home/ubuntu/www/profullstack/mcp-server/.env
+EnvironmentFile=/home/ubuntu/www/profullstack.com/mcp-server/.env
 Environment=NODE_ENV=production
 
 [Install]
