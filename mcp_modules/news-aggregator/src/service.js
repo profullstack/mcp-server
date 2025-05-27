@@ -13,7 +13,14 @@ class NewsAggregatorService {
   constructor() {
     this.parser = new Parser({
       customFields: {
-        item: ['media:content', 'media:thumbnail'],
+        item: [
+          'media:content',
+          'media:thumbnail',
+          'description',
+          'content:encoded',
+          'summary',
+          'excerpt',
+        ],
       },
     });
     this.cache = new Map();
@@ -56,13 +63,40 @@ class NewsAggregatorService {
       logger.info(`Fetching RSS feed from ${url}`);
       const feed = await this.parser.parseURL(url);
 
-      const articles = feed.items.map(item => ({
-        title: item.title || 'No title',
-        description: item.contentSnippet || item.content || item.summary || 'No description',
-        link: item.link || '',
-        publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-        source: item.creator || source,
-      }));
+      const articles = feed.items.map(item => {
+        // Try multiple fields for description, prioritizing snippet over full content
+        let description =
+          item.contentSnippet ||
+          item.summary ||
+          item.description ||
+          item['content:encoded'] ||
+          item.content ||
+          item.excerpt ||
+          'No description available';
+
+        // Clean up description - remove HTML tags and limit length
+        if (description && description !== 'No description available') {
+          description = description
+            .replace(/<[^>]*>/g, '') // Remove HTML tags
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .trim()
+            .substring(0, 300); // Limit to 300 characters
+
+          if (description.length === 300) {
+            description += '...';
+          }
+        }
+
+        return {
+          title: item.title || 'No title',
+          description,
+          link: item.link || '',
+          publishedAt: item.pubDate
+            ? new Date(item.pubDate).toISOString()
+            : new Date().toISOString(),
+          source: item.creator || source,
+        };
+      });
 
       const result = {
         source,
