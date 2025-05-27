@@ -1,0 +1,33 @@
+{
+  "name": "mcp-module-qr-generator",
+  "version": "1.0.0",
+  "description": "QR Code Generator module for generating QR codes from text input",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js --timeout 10000"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "qr",
+    "qr-code",
+    "generator",
+    "barcode",
+    "image",
+    "binary"
+  ],
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.3"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  }
+}
