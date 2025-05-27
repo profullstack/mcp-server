@@ -14,6 +14,7 @@ import {
   searchNews,
   clearCache,
   getHealthStatus,
+  debugRSSFeed,
 } from './src/controller.js';
 import { newsAggregatorService } from './src/service.js';
 
@@ -108,6 +109,9 @@ export async function register(app) {
 
   // Cache management
   app.delete('/news-aggregator/cache', clearCache);
+
+  // Debug endpoint
+  app.get('/news-aggregator/debug', debugRSSFeed);
 
   // Register MCP tool info
   app.get('/tools/news-aggregator/info', c => {

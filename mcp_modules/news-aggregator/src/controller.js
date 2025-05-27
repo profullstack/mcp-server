@@ -314,3 +314,37 @@ export async function getHealthStatus(c) {
     );
   }
 }
+
+/**
+ * Debug RSS feed to see raw data
+ */
+export async function debugRSSFeed(c) {
+  try {
+    const source = c.req.query('source') || 'yahoo-finance';
+
+    let result;
+    switch (source.toLowerCase()) {
+      case 'yahoo-finance':
+        result = await newsAggregatorService.getYahooFinanceNews();
+        break;
+      case 'cnbc':
+        result = await newsAggregatorService.getCNBCNews();
+        break;
+      case 'marketwatch':
+        result = await newsAggregatorService.getMarketWatchNews();
+        break;
+      default:
+        return c.json({ error: `Unknown source: ${source}` }, 400);
+    }
+
+    return c.json({
+      source,
+      totalArticles: result.articles.length,
+      sampleArticle: result.articles[0] || null,
+      allArticles: result.articles,
+    });
+  } catch (error) {
+    logger.error('Error in debugRSSFeed:', error);
+    return c.json({ error: error.message }, 500);
+  }
+}
