@@ -289,8 +289,8 @@ class NewsAggregatorService {
    * Get news from Reuters RSS
    */
   async getReutersNews() {
-    const url = 'https://feeds.reuters.com/reuters/businessNews';
-    return this.parseRSSFeed(url, 'Reuters', 'Business');
+    const url = 'https://www.reuters.com/arc/outboundfeeds/rss/';
+    return this.parseRSSFeed(url, 'Reuters', 'World');
   }
 
   /**
@@ -431,7 +431,7 @@ class NewsAggregatorService {
    * Get news from Bitcoin Magazine RSS
    */
   async getBitcoinMagazineNews() {
-    const url = 'https://bitcoinmagazine.com/.rss/full/';
+    const url = 'https://bitcoinmagazine.com/feed';
     return this.parseRSSFeed(url, 'Bitcoin Magazine', 'Cryptocurrency');
   }
 
@@ -467,7 +467,7 @@ class NewsAggregatorService {
    * Get news from Scientific American RSS
    */
   async getScientificAmericanNews() {
-    const url = 'https://rss.sciam.com/ScientificAmerican-Global';
+    const url = 'https://www.scientificamerican.com/platform/syndication/rss/';
     return this.parseRSSFeed(url, 'Scientific American', 'Science');
   }
 
@@ -483,7 +483,7 @@ class NewsAggregatorService {
    * Get news from Medical News Today RSS
    */
   async getMedicalNewsTodayNews() {
-    const url = 'https://www.medicalnewstoday.com/feeds/news';
+    const url = 'https://www.medicalnewstoday.com/rss';
     return this.parseRSSFeed(url, 'Medical News Today', 'Health');
   }
 
@@ -576,7 +576,6 @@ class NewsAggregatorService {
       google: () => this.getGoogleNews(category),
       bbc: () => this.getBBCNews(category),
       npr: () => this.getNPRNews(),
-      reuters: () => this.getReutersNews(),
       aljazeera: () => this.getAlJazeeraNews(),
 
       // Finance & Business
