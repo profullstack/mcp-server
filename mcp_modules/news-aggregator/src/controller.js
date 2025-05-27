@@ -190,6 +190,10 @@ export async function getAggregatedNews(c) {
       );
     }
 
+    // Add additional metadata
+    result.successfulSources = result.sources.length;
+    result.totalSources = sourceList.length;
+
     return c.json(result);
   } catch (error) {
     logger.error('Error in getAggregatedNews:', error);
@@ -272,6 +276,9 @@ export async function searchNews(c) {
       sources: sourceList,
       articles: allArticles,
       totalResults: allArticles.length,
+      errors: result.errors || [],
+      successfulSources: result.sources.length,
+      totalSources: sourceList.length,
       searchedAt: new Date().toISOString(),
     });
   } catch (error) {

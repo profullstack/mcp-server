@@ -289,8 +289,8 @@ class NewsAggregatorService {
    * Get news from Reuters RSS
    */
   async getReutersNews() {
-    const url = 'https://www.reutersagency.com/feed/?best-topics=tech';
-    return this.parseRSSFeed(url, 'Reuters', 'World');
+    const url = 'https://feeds.reuters.com/reuters/businessNews';
+    return this.parseRSSFeed(url, 'Reuters', 'Business');
   }
 
   /**
@@ -383,6 +383,30 @@ class NewsAggregatorService {
   async getMITTechReviewNews() {
     const url = 'https://www.technologyreview.com/feed/';
     return this.parseRSSFeed(url, 'MIT Technology Review', 'Technology');
+  }
+
+  /**
+   * Get news from Wired RSS
+   */
+  async getWiredNews() {
+    const url = 'https://www.wired.com/feed/rss';
+    return this.parseRSSFeed(url, 'Wired', 'Technology');
+  }
+
+  /**
+   * Get news from Engadget RSS
+   */
+  async getEngadgetNews() {
+    const url = 'https://www.engadget.com/rss.xml';
+    return this.parseRSSFeed(url, 'Engadget', 'Technology');
+  }
+
+  /**
+   * Get news from VentureBeat RSS
+   */
+  async getVentureBeatNews() {
+    const url = 'https://venturebeat.com/feed/';
+    return this.parseRSSFeed(url, 'VentureBeat', 'Technology');
   }
 
   // ===== CRYPTOCURRENCY RSS FEEDS =====
@@ -568,6 +592,9 @@ class NewsAggregatorService {
       hackernews: () => this.getHackerNews(),
       'ars-technica': () => this.getArsTechnicaNews(),
       'mit-tech-review': () => this.getMITTechReviewNews(),
+      wired: () => this.getWiredNews(),
+      engadget: () => this.getEngadgetNews(),
+      venturebeat: () => this.getVentureBeatNews(),
 
       // Cryptocurrency
       coindesk: () => this.getCoinDeskNews(),
@@ -679,6 +706,9 @@ class NewsAggregatorService {
         type: 'rss',
         categories: ['technology'],
       },
+      { id: 'wired', name: 'Wired', type: 'rss', categories: ['technology'] },
+      { id: 'engadget', name: 'Engadget', type: 'rss', categories: ['technology'] },
+      { id: 'venturebeat', name: 'VentureBeat', type: 'rss', categories: ['technology'] },
 
       // Cryptocurrency RSS
       { id: 'coindesk', name: 'CoinDesk', type: 'rss', categories: ['cryptocurrency'] },
@@ -744,6 +774,9 @@ class NewsAggregatorService {
       'hackernews',
       'ars-technica',
       'mit-tech-review',
+      'wired',
+      'engadget',
+      'venturebeat',
       // Cryptocurrency
       'coindesk',
       'cryptoslate',
