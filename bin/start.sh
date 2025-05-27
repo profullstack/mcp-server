@@ -7,7 +7,7 @@ fi
 
 # Load environment variables from .env file if it exists
 if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+  source .env
 fi
 
 # Set NODE_ENV to production if not already set
