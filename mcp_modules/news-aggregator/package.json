@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
-    "rss-parser": "^3.13.0",
     "node-fetch": "^3.3.2",
     "https-proxy-agent": "^7.0.2",
     "http-proxy-agent": "^7.0.0"

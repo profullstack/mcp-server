@@ -4,7 +4,6 @@
  * Handles RSS feed parsing and website scraping for news aggregation
  */
 
-import Parser from 'rss-parser';
 import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
 import { HttpsProxyAgent } from 'https-proxy-agent';
@@ -13,7 +12,7 @@ import { logger } from '../../../src/utils/logger.js';
 
 class NewsAggregatorService {
   constructor() {
-    // Set up proxy configuration
+    // Set up proxy configuration for all fetch operations (RSS and scraping)
     this.proxyUrl = process.env.WEBSHARE_PROXY;
     this.proxyAgent = null;
 
@@ -24,29 +23,13 @@ class NewsAggregatorService {
           proxyURL.protocol === 'https:'
             ? new HttpsProxyAgent(this.proxyUrl)
             : new HttpProxyAgent(this.proxyUrl);
-        logger.info(`Using proxy: ${proxyURL.hostname}:${proxyURL.port}`);
+        logger.info(`Proxy configured for all requests: ${proxyURL.hostname}:${proxyURL.port}`);
       } catch (error) {
-        logger.error('Invalid proxy URL:', error);
+        logger.error('Invalid proxy URL, proceeding without proxy:', error);
+        this.proxyAgent = null;
       }
     }
 
-    // Initialize RSS parser without proxy (rss-parser has issues with proxy agents)
-    this.parser = new Parser({
-      customFields: {
-        item: [
-          'media:content',
-          'media:thumbnail',
-          'description',
-          'content:encoded',
-          'summary',
-          'excerpt',
-        ],
-      },
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-      },
-    });
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
   }
@@ -73,7 +56,7 @@ class NewsAggregatorService {
   }
 
   /**
-   * Parse RSS feed from URL
+   * Parse RSS feed from URL using custom fetch + XML parsing
    */
   async parseRSSFeed(url, source, category = 'General') {
     const cacheKey = `rss_${url}`;
@@ -85,17 +68,44 @@ class NewsAggregatorService {
 
     try {
       logger.info(`Fetching RSS feed from ${url}`);
-      const feed = await this.parser.parseURL(url);
 
-      const articles = feed.items.map(item => {
-        // Try multiple fields for description, prioritizing snippet over full content
+      // Fetch RSS XML with proxy support
+      const fetchOptions = {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          Accept: 'application/rss+xml, application/xml, text/xml, */*',
+        },
+      };
+
+      if (this.proxyAgent) {
+        fetchOptions.agent = this.proxyAgent;
+      }
+
+      const response = await fetch(url, fetchOptions);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const xmlText = await response.text();
+      const $ = cheerio.load(xmlText, { xmlMode: true });
+
+      const articles = [];
+
+      // Parse RSS items (supports both RSS and Atom feeds)
+      $('item, entry').each((index, element) => {
+        const $item = $(element);
+
+        // Extract title
+        const title = $item.find('title').text().trim() || 'No title';
+
+        // Extract description from multiple possible fields
         let description =
-          item.contentSnippet ||
-          item.summary ||
-          item.description ||
-          item['content:encoded'] ||
-          item.content ||
-          item.excerpt ||
+          $item.find('description').text() ||
+          $item.find('summary').text() ||
+          $item.find('content\\:encoded').text() ||
+          $item.find('content').text() ||
           'No description available';
 
         // Clean up description - remove HTML tags and limit length
@@ -111,15 +121,44 @@ class NewsAggregatorService {
           }
         }
 
-        return {
-          title: item.title || 'No title',
-          description,
-          link: item.link || '',
-          publishedAt: item.pubDate
-            ? new Date(item.pubDate).toISOString()
-            : new Date().toISOString(),
-          source: item.creator || source,
-        };
+        // Extract link
+        let link = $item.find('link').text() || $item.find('link').attr('href') || '';
+
+        // For Atom feeds, link might be in href attribute
+        if (!link) {
+          link = $item.find('link[rel="alternate"]').attr('href') || '';
+        }
+
+        // Extract publication date
+        const pubDate =
+          $item.find('pubDate').text() ||
+          $item.find('published').text() ||
+          $item.find('updated').text() ||
+          '';
+
+        let publishedAt;
+        try {
+          publishedAt = pubDate ? new Date(pubDate).toISOString() : new Date().toISOString();
+        } catch {
+          publishedAt = new Date().toISOString();
+        }
+
+        // Extract author/creator
+        const author =
+          $item.find('author').text() ||
+          $item.find('dc\\:creator').text() ||
+          $item.find('creator').text() ||
+          source;
+
+        if (title && link) {
+          articles.push({
+            title,
+            description,
+            link,
+            publishedAt,
+            source: author,
+          });
+        }
       });
 
       const result = {
@@ -162,6 +201,7 @@ class NewsAggregatorService {
         },
       };
 
+      // Use proxy if available
       if (this.proxyAgent) {
         fetchOptions.agent = this.proxyAgent;
       }
@@ -252,7 +292,7 @@ class NewsAggregatorService {
    * Get news from Reuters RSS
    */
   async getReutersNews() {
-    const url = 'https://feeds.reuters.com/reuters/topNews';
+    const url = 'https://www.reutersagency.com/feed/?best-topics=tech';
     return this.parseRSSFeed(url, 'Reuters', 'World');
   }
 
