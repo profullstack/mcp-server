@@ -24,8 +24,8 @@ chmod 644 /etc/systemd/system/mcp-server.service
 mkdir -p /var/log
 touch /var/log/mcp-server.log
 touch /var/log/mcp-server-error.log
-chown ettinger:ettinger /var/log/mcp-server.log
-chown ettinger:ettinger /var/log/mcp-server-error.log
+chown ubuntu:ubuntu /var/log/mcp-server.log
+chown ubuntu:ubuntu /var/log/mcp-server-error.log
 
 # Reload systemd
 echo "Reloading systemd daemon..."
