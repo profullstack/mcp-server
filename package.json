@@ -16,6 +16,14 @@
     "prepare": "husky",
     "pre-commit": "lint-staged"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/profullstack/mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/profullstack/mcp-server/issues"
+  },
+  "homepage": "https://profullstack.com",
   "keywords": [
     "mcp",
     "model",
@@ -23,8 +31,8 @@
     "server",
     "api"
   ],
-  "author": "MCP Server Team",
-  "license": "ISC",
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
   "packageManager": "pnpm@10.6.5",
   "engines": {
     "node": ">=18.0.0"
