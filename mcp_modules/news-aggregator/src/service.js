@@ -7,10 +7,29 @@
 import Parser from 'rss-parser';
 import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { HttpProxyAgent } from 'http-proxy-agent';
 import { logger } from '../../../src/utils/logger.js';
 
 class NewsAggregatorService {
   constructor() {
+    // Set up proxy configuration
+    this.proxyUrl = process.env.WEBSHARE_PROXY;
+    this.proxyAgent = null;
+
+    if (this.proxyUrl) {
+      try {
+        const proxyURL = new URL(this.proxyUrl);
+        this.proxyAgent =
+          proxyURL.protocol === 'https:'
+            ? new HttpsProxyAgent(this.proxyUrl)
+            : new HttpProxyAgent(this.proxyUrl);
+        logger.info(`Using proxy: ${proxyURL.hostname}:${proxyURL.port}`);
+      } catch (error) {
+        logger.error('Invalid proxy URL:', error);
+      }
+    }
+
     this.parser = new Parser({
       customFields: {
         item: [
@@ -22,6 +41,20 @@ class NewsAggregatorService {
           'excerpt',
         ],
       },
+      requestOptions: this.proxyAgent
+        ? {
+            agent: this.proxyAgent,
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            },
+          }
+        : {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            },
+          },
     });
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
@@ -126,11 +159,23 @@ class NewsAggregatorService {
 
     try {
       logger.info(`Scraping website ${url}`);
-      const response = await fetch(url, {
+      const fetchOptions = {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          Connection: 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
         },
-      });
+      };
+
+      if (this.proxyAgent) {
+        fetchOptions.agent = this.proxyAgent;
+      }
+
+      const response = await fetch(url, fetchOptions);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -216,7 +261,7 @@ class NewsAggregatorService {
    * Get news from Reuters RSS
    */
   async getReutersNews() {
-    const url = 'https://www.reutersagency.com/feed/?best-topics=world';
+    const url = 'https://feeds.reuters.com/reuters/topNews';
     return this.parseRSSFeed(url, 'Reuters', 'World');
   }
 
@@ -370,7 +415,7 @@ class NewsAggregatorService {
    * Get news from Scientific American RSS
    */
   async getScientificAmericanNews() {
-    const url = 'https://www.scientificamerican.com/feed/rss/';
+    const url = 'https://rss.sciam.com/ScientificAmerican-Global';
     return this.parseRSSFeed(url, 'Scientific American', 'Science');
   }
 
@@ -378,7 +423,7 @@ class NewsAggregatorService {
    * Get news from Nature RSS
    */
   async getNatureNews() {
-    const url = 'https://www.nature.com/nature.rss';
+    const url = 'https://feeds.nature.com/nature/rss/current';
     return this.parseRSSFeed(url, 'Nature', 'Science');
   }
 
@@ -386,7 +431,7 @@ class NewsAggregatorService {
    * Get news from Medical News Today RSS
    */
   async getMedicalNewsTodayNews() {
-    const url = 'https://www.medicalnewstoday.com/rss';
+    const url = 'https://www.medicalnewstoday.com/feeds/news';
     return this.parseRSSFeed(url, 'Medical News Today', 'Health');
   }
 
