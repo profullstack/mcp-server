@@ -1,5 +1,5 @@
 [Unit]
-Description=Document Generation Service
+Description=MCP Server - Model Context Protocol Server
 After=network.target
 
 [Service]
