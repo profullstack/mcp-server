@@ -30,6 +30,7 @@ class NewsAggregatorService {
       }
     }
 
+    // Initialize RSS parser without proxy (rss-parser has issues with proxy agents)
     this.parser = new Parser({
       customFields: {
         item: [
@@ -41,20 +42,10 @@ class NewsAggregatorService {
           'excerpt',
         ],
       },
-      requestOptions: this.proxyAgent
-        ? {
-            agent: this.proxyAgent,
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            },
-          }
-        : {
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            },
-          },
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      },
     });
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
