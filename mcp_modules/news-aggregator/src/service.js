@@ -9,6 +9,8 @@ import fetch from 'node-fetch';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { HttpProxyAgent } from 'http-proxy-agent';
 import { logger } from '../../../src/utils/logger.js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 class NewsAggregatorService {
   constructor() {
@@ -32,6 +34,171 @@ class NewsAggregatorService {
 
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+
+    // Load exchange data
+    this.exchangeData = this.loadExchangeData();
+  }
+
+  /**
+   * Load ticker data from exchange JSON files
+   */
+  loadExchangeData() {
+    const exchanges = {};
+    const exchangeFiles = [
+      'nasdaq_full_tickers.json',
+      'nyse_full_tickers.json',
+      'amex_full_tickers.json',
+    ];
+
+    for (const file of exchangeFiles) {
+      try {
+        const exchangeName = file.replace('_full_tickers.json', '');
+        const filePath = join(process.cwd(), 'docs', file);
+        const data = JSON.parse(readFileSync(filePath, 'utf8'));
+        exchanges[exchangeName] = data;
+        logger.info(`Loaded ${data.length} tickers from ${exchangeName}`);
+      } catch (error) {
+        logger.error(`Error loading ${file}:`, error);
+        exchanges[file.replace('_full_tickers.json', '')] = [];
+      }
+    }
+
+    return exchanges;
+  }
+
+  /**
+   * Find ticker information across all exchanges
+   */
+  findTicker(symbol) {
+    const upperSymbol = symbol.toUpperCase();
+
+    for (const [exchange, tickers] of Object.entries(this.exchangeData)) {
+      const ticker = tickers.find(t => t.symbol === upperSymbol);
+      if (ticker) {
+        return {
+          ...ticker,
+          exchange: exchange.toUpperCase(),
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get ticker information and related news
+   */
+  async getTickerNews(tickers) {
+    const tickerList = tickers.split(',').map(t => t.trim().toUpperCase());
+    const results = [];
+
+    for (const tickerSymbol of tickerList) {
+      try {
+        // Find ticker information
+        const tickerInfo = this.findTicker(tickerSymbol);
+
+        if (!tickerInfo) {
+          results.push({
+            symbol: tickerSymbol,
+            error: 'Ticker not found in any exchange',
+            tickerInfo: null,
+            news: null,
+          });
+          continue;
+        }
+
+        // Extract company name for news search
+        let companyName = tickerInfo.name;
+
+        // Clean up company name for better search results
+        companyName = companyName
+          .replace(
+            /\b(Inc\.?|Corp\.?|Corporation|Company|Co\.?|Ltd\.?|Limited|Class [A-Z]|Common Stock|Ordinary Shares|Rights|Warrants?)\b/gi,
+            ''
+          )
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        // Search for news using company name
+        const newsResult = await this.searchNewsByKeywords(
+          [companyName],
+          ['yahoo-finance', 'cnbc', 'marketwatch'],
+          10
+        );
+
+        results.push({
+          symbol: tickerSymbol,
+          tickerInfo,
+          companyName,
+          news: newsResult,
+          error: null,
+        });
+      } catch (error) {
+        logger.error(`Error processing ticker ${tickerSymbol}:`, error);
+        results.push({
+          symbol: tickerSymbol,
+          error: error.message,
+          tickerInfo: null,
+          news: null,
+        });
+      }
+    }
+
+    return {
+      tickers: results,
+      totalTickers: tickerList.length,
+      successfulLookups: results.filter(r => !r.error).length,
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Search news by keywords with specific sources and limit
+   */
+  async searchNewsByKeywords(keywords, sources = ['google', 'hackernews', 'bbc'], limit = 5) {
+    try {
+      // Get aggregated news from specified sources
+      const result = await this.getAggregatedNews(sources);
+
+      // Filter by keywords
+      const keywordRegex = new RegExp(keywords.join('|'), 'i');
+      const filteredSources = result.sources.map(source => ({
+        ...source,
+        articles: source.articles.filter(
+          article => keywordRegex.test(article.title) || keywordRegex.test(article.description)
+        ),
+      }));
+
+      // Flatten all articles and sort by date
+      let allArticles = [];
+      filteredSources.forEach(source => {
+        allArticles.push(
+          ...source.articles.map(article => ({
+            ...article,
+            sourceCategory: source.category,
+          }))
+        );
+      });
+
+      // Sort by publication date (newest first)
+      allArticles.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+
+      // Apply limit
+      if (limit && limit > 0) {
+        allArticles = allArticles.slice(0, limit);
+      }
+
+      return {
+        keywords,
+        sources,
+        articles: allArticles,
+        totalResults: allArticles.length,
+        searchedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      logger.error('Error in searchNewsByKeywords:', error);
+      throw error;
+    }
   }
 
   /**

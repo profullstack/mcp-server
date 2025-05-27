@@ -1,6 +1,6 @@
 /**
  * Example Custom Module for MCP Server
- * 
+ *
  * This is an example of how to create a custom module for the MCP server.
  * This module adds a simple calculator tool that can perform basic arithmetic operations.
  */
@@ -14,13 +14,13 @@ import { logger } from '../../src/utils/logger.js';
  */
 function calculator(params) {
   const { operation, a, b } = params;
-  
+
   if (typeof a !== 'number' || typeof b !== 'number') {
     throw new Error('Parameters a and b must be numbers');
   }
-  
+
   let result;
-  
+
   switch (operation) {
     case 'add':
       result = a + b;
@@ -40,7 +40,7 @@ function calculator(params) {
     default:
       throw new Error(`Unknown operation: ${operation}`);
   }
-  
+
   return { result };
 }
 
@@ -50,9 +50,9 @@ function calculator(params) {
  */
 export async function register(app) {
   logger.info('Registering calculator module');
-  
+
   // Register the calculator tool
-  app.get('/tools/calculator/info', (c) => {
+  app.get('/tools/calculator/info', c => {
     return c.json({
       name: 'calculator',
       description: 'Performs basic arithmetic operations',
@@ -60,27 +60,27 @@ export async function register(app) {
         operation: {
           type: 'string',
           description: 'The operation to perform (add, subtract, multiply, divide)',
-          required: true
+          required: true,
         },
         a: {
           type: 'number',
           description: 'The first operand',
-          required: true
+          required: true,
         },
         b: {
           type: 'number',
           description: 'The second operand',
-          required: true
-        }
-      }
+          required: true,
+        },
+      },
     });
   });
-  
+
   // Register the calculator endpoint
-  app.post('/tools/calculator', async (c) => {
+  app.post('/tools/calculator', async c => {
     try {
       const params = await c.req.json();
-      
+
       // Validate required parameters
       if (!params.operation) {
         return c.json({ error: 'Missing required parameter: operation' }, 400);
@@ -91,28 +91,28 @@ export async function register(app) {
       if (params.b === undefined) {
         return c.json({ error: 'Missing required parameter: b' }, 400);
       }
-      
+
       // Perform the calculation
       const result = calculator(params);
-      
+
       return c.json({
         tool: 'calculator',
         operation: params.operation,
         a: params.a,
         b: params.b,
         result: result.result,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       return c.json({ error: error.message }, 400);
     }
   });
-  
+
   // Register the module info endpoint
-  app.get('/modules/calculator', (c) => {
+  app.get('/modules/calculator', c => {
     return c.json(metadata);
   });
-  
+
   logger.info('Calculator module registered successfully');
 }
 
@@ -132,5 +132,5 @@ export const metadata = {
   version: '1.0.0',
   description: 'A simple calculator module that provides basic arithmetic operations',
   author: 'MCP Server Team',
-  tools: ['calculator']
+  tools: ['calculator'],
 };

@@ -223,10 +223,10 @@ export async function getAvailableSources(c) {
  */
 export async function searchNews(c) {
   try {
-    const { keywords, sources, category, limit } = c.req.query();
+    const { keywords, tickers, sources, category, limit } = c.req.query();
 
-    if (!keywords) {
-      return c.json({ error: 'Keywords parameter is required' }, 400);
+    if (!keywords && !tickers) {
+      return c.json({ error: 'Either keywords or tickers parameter is required' }, 400);
     }
 
     // Parse sources parameter
@@ -239,11 +239,57 @@ export async function searchNews(c) {
       }
     }
 
+    let keywordList = [];
+    let tickerInfo = [];
+
+    // Handle tickers parameter
+    if (tickers) {
+      const tickerSymbols = tickers.split(',').map(t => t.trim().toUpperCase());
+
+      for (const tickerSymbol of tickerSymbols) {
+        const ticker = newsAggregatorService.findTicker(tickerSymbol);
+        if (ticker) {
+          // Clean up company name for search
+          let companyName = ticker.name
+            .replace(
+              /\b(Inc\.?|Corp\.?|Corporation|Company|Co\.?|Ltd\.?|Limited|Class [A-Z]|Common Stock|Ordinary Shares|Rights|Warrants?)\b/gi,
+              ''
+            )
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          keywordList.push(companyName);
+          tickerInfo.push({
+            symbol: tickerSymbol,
+            name: ticker.name,
+            searchTerm: companyName,
+            exchange: ticker.exchange,
+          });
+        } else {
+          tickerInfo.push({
+            symbol: tickerSymbol,
+            name: null,
+            searchTerm: null,
+            exchange: null,
+            error: 'Ticker not found',
+          });
+        }
+      }
+    }
+
+    // Handle keywords parameter
+    if (keywords) {
+      keywordList.push(...keywords.split(',').map(k => k.trim()));
+    }
+
+    if (keywordList.length === 0) {
+      return c.json({ error: 'No valid search terms found' }, 400);
+    }
+
     // Get aggregated news
     const result = await newsAggregatorService.getAggregatedNews(sourceList, category);
 
     // Filter by keywords
-    const keywordList = keywords.split(',').map(k => k.trim());
     const filteredSources = result.sources.map(source => ({
       ...source,
       articles: newsAggregatorService.filterByKeywords(source.articles, keywordList),
@@ -271,7 +317,7 @@ export async function searchNews(c) {
       }
     }
 
-    return c.json({
+    const response = {
       keywords: keywordList,
       sources: sourceList,
       articles: allArticles,
@@ -280,7 +326,15 @@ export async function searchNews(c) {
       successfulSources: result.sources.length,
       totalSources: sourceList.length,
       searchedAt: new Date().toISOString(),
-    });
+    };
+
+    // Include ticker information if tickers were provided
+    if (tickers) {
+      response.tickers = tickerInfo;
+      response.tickerSymbols = tickers.split(',').map(t => t.trim().toUpperCase());
+    }
+
+    return c.json(response);
   } catch (error) {
     logger.error('Error in searchNews:', error);
     return c.json({ error: error.message }, 500);
