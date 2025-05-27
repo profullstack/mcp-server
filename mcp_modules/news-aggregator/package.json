@@ -1,0 +1,33 @@
+{
+  "name": "mcp-module-news-aggregator",
+  "version": "1.0.0",
+  "description": "A news aggregator module for MCP server that parses RSS feeds and scrapes websites",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "news",
+    "aggregator",
+    "rss",
+    "scraping"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "rss-parser": "^3.13.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  }
+}

@@ -1,0 +1,608 @@
+/**
+ * News Aggregator Service
+ *
+ * Handles RSS feed parsing and website scraping for news aggregation
+ */
+
+import Parser from 'rss-parser';
+import * as cheerio from 'cheerio';
+import fetch from 'node-fetch';
+import { logger } from '../../../src/utils/logger.js';
+
+class NewsAggregatorService {
+  constructor() {
+    this.parser = new Parser({
+      customFields: {
+        item: ['media:content', 'media:thumbnail'],
+      },
+    });
+    this.cache = new Map();
+    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+  }
+
+  /**
+   * Get cached data if available and not expired
+   */
+  getCachedData(key) {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  /**
+   * Set data in cache
+   */
+  setCachedData(key, data) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+    });
+  }
+
+  /**
+   * Parse RSS feed from URL
+   */
+  async parseRSSFeed(url, source, category = 'General') {
+    const cacheKey = `rss_${url}`;
+    const cached = this.getCachedData(cacheKey);
+    if (cached) {
+      logger.info(`Returning cached RSS data for ${source}`);
+      return cached;
+    }
+
+    try {
+      logger.info(`Fetching RSS feed from ${url}`);
+      const feed = await this.parser.parseURL(url);
+
+      const articles = feed.items.map(item => ({
+        title: item.title || 'No title',
+        description: item.contentSnippet || item.content || item.summary || 'No description',
+        link: item.link || '',
+        publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+        source: item.creator || source,
+      }));
+
+      const result = {
+        source,
+        category,
+        articles,
+        fetchedAt: new Date().toISOString(),
+      };
+
+      this.setCachedData(cacheKey, result);
+      return result;
+    } catch (error) {
+      logger.error(`Error parsing RSS feed from ${url}:`, error);
+      throw new Error(`Failed to parse RSS feed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Scrape website using Cheerio
+   */
+  async scrapeWebsite(url, source, selectors, category = 'General') {
+    const cacheKey = `scrape_${url}`;
+    const cached = this.getCachedData(cacheKey);
+    if (cached) {
+      logger.info(`Returning cached scrape data for ${source}`);
+      return cached;
+    }
+
+    try {
+      logger.info(`Scraping website ${url}`);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; NewsAggregator/1.0)',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const html = await response.text();
+      const $ = cheerio.load(html);
+
+      const articles = [];
+
+      $(selectors.container).each((index, element) => {
+        const $element = $(element);
+
+        const title = $element.find(selectors.title).text().trim();
+        const description = $element.find(selectors.description).text().trim();
+        const link = $element.find(selectors.link).attr('href');
+        const dateText = $element.find(selectors.date).text().trim();
+
+        if (title && link) {
+          // Ensure absolute URL
+          const absoluteLink = link.startsWith('http') ? link : new URL(link, url).href;
+
+          // Parse date or use current time
+          let publishedAt;
+          try {
+            publishedAt = dateText ? new Date(dateText).toISOString() : new Date().toISOString();
+          } catch {
+            publishedAt = new Date().toISOString();
+          }
+
+          articles.push({
+            title,
+            description: description || 'No description available',
+            link: absoluteLink,
+            publishedAt,
+            source,
+          });
+        }
+      });
+
+      const result = {
+        source,
+        category,
+        articles,
+        fetchedAt: new Date().toISOString(),
+      };
+
+      this.setCachedData(cacheKey, result);
+      return result;
+    } catch (error) {
+      logger.error(`Error scraping website ${url}:`, error);
+      throw new Error(`Failed to scrape website: ${error.message}`);
+    }
+  }
+
+  // ===== GENERAL NEWS RSS FEEDS =====
+
+  /**
+   * Get news from Google News RSS (Top Stories)
+   */
+  async getGoogleNews(category = 'general') {
+    const url = 'https://news.google.com/rss';
+    return this.parseRSSFeed(url, 'Google News', category);
+  }
+
+  /**
+   * Get news from BBC World RSS
+   */
+  async getBBCNews(category = 'world') {
+    const url = 'http://feeds.bbci.co.uk/news/world/rss.xml';
+    return this.parseRSSFeed(url, 'BBC News', category);
+  }
+
+  /**
+   * Get news from NPR RSS
+   */
+  async getNPRNews() {
+    const url = 'https://feeds.npr.org/1001/rss.xml';
+    return this.parseRSSFeed(url, 'NPR', 'General');
+  }
+
+  /**
+   * Get news from Reuters RSS
+   */
+  async getReutersNews() {
+    const url = 'https://www.reutersagency.com/feed/?best-topics=world';
+    return this.parseRSSFeed(url, 'Reuters', 'World');
+  }
+
+  /**
+   * Get news from Al Jazeera RSS
+   */
+  async getAlJazeeraNews() {
+    const url = 'https://www.aljazeera.com/xml/rss/all.xml';
+    return this.parseRSSFeed(url, 'Al Jazeera', 'World');
+  }
+
+  // ===== FINANCE & BUSINESS RSS FEEDS =====
+
+  /**
+   * Get news from CNBC RSS
+   */
+  async getCNBCNews() {
+    const url = 'https://www.cnbc.com/id/100003114/device/rss/rss.html';
+    return this.parseRSSFeed(url, 'CNBC', 'Finance');
+  }
+
+  /**
+   * Get news from Yahoo Finance RSS
+   */
+  async getYahooFinanceNews() {
+    const url = 'https://finance.yahoo.com/news/rssindex';
+    return this.parseRSSFeed(url, 'Yahoo Finance', 'Finance');
+  }
+
+  /**
+   * Get news from MarketWatch RSS
+   */
+  async getMarketWatchNews() {
+    const url = 'https://feeds.marketwatch.com/marketwatch/topstories/';
+    return this.parseRSSFeed(url, 'MarketWatch', 'Finance');
+  }
+
+  /**
+   * Get news from Investopedia RSS
+   */
+  async getInvestopediaNews() {
+    const url = 'https://www.investopedia.com/feedbuilder/feed/getfeed/?feedName=rss_headline';
+    return this.parseRSSFeed(url, 'Investopedia', 'Finance');
+  }
+
+  /**
+   * Get news from Seeking Alpha RSS
+   */
+  async getSeekingAlphaNews() {
+    const url = 'https://seekingalpha.com/market_currents.xml';
+    return this.parseRSSFeed(url, 'Seeking Alpha', 'Finance');
+  }
+
+  // ===== TECHNOLOGY RSS FEEDS =====
+
+  /**
+   * Get news from TechCrunch RSS
+   */
+  async getTechCrunchNews() {
+    const url = 'https://techcrunch.com/feed/';
+    return this.parseRSSFeed(url, 'TechCrunch', 'Technology');
+  }
+
+  /**
+   * Get news from The Verge RSS
+   */
+  async getTheVergeNews() {
+    const url = 'https://www.theverge.com/rss/index.xml';
+    return this.parseRSSFeed(url, 'The Verge', 'Technology');
+  }
+
+  /**
+   * Get news from Hacker News RSS
+   */
+  async getHackerNews() {
+    const url = 'https://news.ycombinator.com/rss';
+    return this.parseRSSFeed(url, 'Hacker News', 'Technology');
+  }
+
+  /**
+   * Get news from Ars Technica RSS
+   */
+  async getArsTechnicaNews() {
+    const url = 'http://feeds.arstechnica.com/arstechnica/index';
+    return this.parseRSSFeed(url, 'Ars Technica', 'Technology');
+  }
+
+  /**
+   * Get news from MIT Technology Review RSS
+   */
+  async getMITTechReviewNews() {
+    const url = 'https://www.technologyreview.com/feed/';
+    return this.parseRSSFeed(url, 'MIT Technology Review', 'Technology');
+  }
+
+  // ===== CRYPTOCURRENCY RSS FEEDS =====
+
+  /**
+   * Get news from CoinDesk RSS
+   */
+  async getCoinDeskNews() {
+    const url = 'https://www.coindesk.com/arc/outboundfeeds/rss/';
+    return this.parseRSSFeed(url, 'CoinDesk', 'Cryptocurrency');
+  }
+
+  /**
+   * Get news from CryptoSlate RSS
+   */
+  async getCryptoSlateNews() {
+    const url = 'https://cryptoslate.com/feed/';
+    return this.parseRSSFeed(url, 'CryptoSlate', 'Cryptocurrency');
+  }
+
+  /**
+   * Get news from Bitcoin Magazine RSS
+   */
+  async getBitcoinMagazineNews() {
+    const url = 'https://bitcoinmagazine.com/.rss/full/';
+    return this.parseRSSFeed(url, 'Bitcoin Magazine', 'Cryptocurrency');
+  }
+
+  // ===== INTERNATIONAL RSS FEEDS =====
+
+  /**
+   * Get news from Deutsche Welle RSS
+   */
+  async getDeutscheWelleNews() {
+    const url = 'https://rss.dw.com/rdf/rss-en-top';
+    return this.parseRSSFeed(url, 'Deutsche Welle', 'International');
+  }
+
+  /**
+   * Get news from France24 RSS
+   */
+  async getFrance24News() {
+    const url = 'https://www.france24.com/en/rss';
+    return this.parseRSSFeed(url, 'France24', 'International');
+  }
+
+  /**
+   * Get news from Japan Times RSS
+   */
+  async getJapanTimesNews() {
+    const url = 'https://www.japantimes.co.jp/feed/topstories/';
+    return this.parseRSSFeed(url, 'Japan Times', 'International');
+  }
+
+  // ===== SCIENCE & HEALTH RSS FEEDS =====
+
+  /**
+   * Get news from Scientific American RSS
+   */
+  async getScientificAmericanNews() {
+    const url = 'https://www.scientificamerican.com/feed/rss/';
+    return this.parseRSSFeed(url, 'Scientific American', 'Science');
+  }
+
+  /**
+   * Get news from Nature RSS
+   */
+  async getNatureNews() {
+    const url = 'https://www.nature.com/nature.rss';
+    return this.parseRSSFeed(url, 'Nature', 'Science');
+  }
+
+  /**
+   * Get news from Medical News Today RSS
+   */
+  async getMedicalNewsTodayNews() {
+    const url = 'https://www.medicalnewstoday.com/rss';
+    return this.parseRSSFeed(url, 'Medical News Today', 'Health');
+  }
+
+  // ===== SPORTS RSS FEEDS =====
+
+  /**
+   * Get news from ESPN RSS
+   */
+  async getESPNNews() {
+    const url = 'https://www.espn.com/espn/rss/news';
+    return this.parseRSSFeed(url, 'ESPN', 'Sports');
+  }
+
+  // ===== SCRAPABLE WEBSITES =====
+
+  /**
+   * Scrape CNN
+   */
+  async getCNNScrapedNews() {
+    const selectors = {
+      container: '.container__headline, .cd__headline',
+      title: '.container__headline-text, .cd__headline-text',
+      description: '.container__headline-text, .cd__headline-text',
+      link: 'a',
+      date: '.container__date, .cd__date',
+    };
+
+    return this.scrapeWebsite('https://edition.cnn.com', 'CNN', selectors, 'General');
+  }
+
+  /**
+   * Scrape Bloomberg
+   */
+  async getBloombergNews() {
+    const selectors = {
+      container: '[data-module="Story"]',
+      title: '[data-module="Headline"]',
+      description: '[data-module="Summary"]',
+      link: 'a',
+      date: '[data-module="Timestamp"]',
+    };
+
+    return this.scrapeWebsite('https://www.bloomberg.com', 'Bloomberg', selectors, 'Finance');
+  }
+
+  /**
+   * Scrape New York Times
+   */
+  async getNYTimesNews() {
+    const selectors = {
+      container: 'article',
+      title: 'h3',
+      description: 'p',
+      link: 'a',
+      date: 'time',
+    };
+
+    return this.scrapeWebsite('https://www.nytimes.com', 'New York Times', selectors, 'General');
+  }
+
+  /**
+   * Scrape Reuters Technology
+   */
+  async getReutersTechNews() {
+    const selectors = {
+      container: '[data-testid="MediaStoryCard"]',
+      title: '[data-testid="Heading"]',
+      description: '[data-testid="Body"]',
+      link: 'a',
+      date: 'time',
+    };
+
+    return this.scrapeWebsite(
+      'https://www.reuters.com/technology/',
+      'Reuters Technology',
+      selectors,
+      'Technology'
+    );
+  }
+
+  /**
+   * Get aggregated news from multiple sources
+   */
+  async getAggregatedNews(sources = ['google', 'hackernews', 'bbc'], category = 'technology') {
+    const results = [];
+    const errors = [];
+
+    const sourceMap = {
+      // General News
+      google: () => this.getGoogleNews(category),
+      bbc: () => this.getBBCNews(category),
+      npr: () => this.getNPRNews(),
+      reuters: () => this.getReutersNews(),
+      aljazeera: () => this.getAlJazeeraNews(),
+
+      // Finance & Business
+      cnbc: () => this.getCNBCNews(),
+      'yahoo-finance': () => this.getYahooFinanceNews(),
+      marketwatch: () => this.getMarketWatchNews(),
+      investopedia: () => this.getInvestopediaNews(),
+      'seeking-alpha': () => this.getSeekingAlphaNews(),
+
+      // Technology
+      techcrunch: () => this.getTechCrunchNews(),
+      'the-verge': () => this.getTheVergeNews(),
+      hackernews: () => this.getHackerNews(),
+      'ars-technica': () => this.getArsTechnicaNews(),
+      'mit-tech-review': () => this.getMITTechReviewNews(),
+
+      // Cryptocurrency
+      coindesk: () => this.getCoinDeskNews(),
+      cryptoslate: () => this.getCryptoSlateNews(),
+      'bitcoin-magazine': () => this.getBitcoinMagazineNews(),
+
+      // International
+      'deutsche-welle': () => this.getDeutscheWelleNews(),
+      france24: () => this.getFrance24News(),
+      'japan-times': () => this.getJapanTimesNews(),
+
+      // Science & Health
+      'scientific-american': () => this.getScientificAmericanNews(),
+      nature: () => this.getNatureNews(),
+      'medical-news-today': () => this.getMedicalNewsTodayNews(),
+
+      // Sports
+      espn: () => this.getESPNNews(),
+
+      // Scrapable Sites
+      'cnn-scraped': () => this.getCNNScrapedNews(),
+      bloomberg: () => this.getBloombergNews(),
+      nytimes: () => this.getNYTimesNews(),
+      'reuters-tech': () => this.getReutersTechNews(),
+    };
+
+    for (const source of sources) {
+      try {
+        if (sourceMap[source]) {
+          const result = await sourceMap[source]();
+          results.push(result);
+        } else {
+          errors.push(`Unknown source: ${source}`);
+        }
+      } catch (error) {
+        logger.error(`Error fetching from ${source}:`, error);
+        errors.push(`${source}: ${error.message}`);
+      }
+    }
+
+    return {
+      sources: results,
+      errors,
+      totalArticles: results.reduce((sum, result) => sum + result.articles.length, 0),
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Filter articles by keywords
+   */
+  filterByKeywords(articles, keywords) {
+    if (!keywords || keywords.length === 0) {
+      return articles;
+    }
+
+    const keywordRegex = new RegExp(keywords.join('|'), 'i');
+
+    return articles.filter(
+      article => keywordRegex.test(article.title) || keywordRegex.test(article.description)
+    );
+  }
+
+  /**
+   * Get available news sources
+   */
+  getAvailableSources() {
+    return [
+      // General News RSS
+      { id: 'google', name: 'Google News', type: 'rss', categories: ['general'] },
+      { id: 'bbc', name: 'BBC News', type: 'rss', categories: ['world'] },
+      { id: 'npr', name: 'NPR', type: 'rss', categories: ['general'] },
+      { id: 'reuters', name: 'Reuters', type: 'rss', categories: ['world'] },
+      { id: 'aljazeera', name: 'Al Jazeera', type: 'rss', categories: ['world'] },
+
+      // Finance & Business RSS
+      { id: 'cnbc', name: 'CNBC', type: 'rss', categories: ['finance'] },
+      { id: 'yahoo-finance', name: 'Yahoo Finance', type: 'rss', categories: ['finance'] },
+      { id: 'marketwatch', name: 'MarketWatch', type: 'rss', categories: ['finance'] },
+      { id: 'investopedia', name: 'Investopedia', type: 'rss', categories: ['finance'] },
+      { id: 'seeking-alpha', name: 'Seeking Alpha', type: 'rss', categories: ['finance'] },
+
+      // Technology RSS
+      { id: 'techcrunch', name: 'TechCrunch', type: 'rss', categories: ['technology'] },
+      { id: 'the-verge', name: 'The Verge', type: 'rss', categories: ['technology'] },
+      { id: 'hackernews', name: 'Hacker News', type: 'rss', categories: ['technology'] },
+      { id: 'ars-technica', name: 'Ars Technica', type: 'rss', categories: ['technology'] },
+      {
+        id: 'mit-tech-review',
+        name: 'MIT Technology Review',
+        type: 'rss',
+        categories: ['technology'],
+      },
+
+      // Cryptocurrency RSS
+      { id: 'coindesk', name: 'CoinDesk', type: 'rss', categories: ['cryptocurrency'] },
+      { id: 'cryptoslate', name: 'CryptoSlate', type: 'rss', categories: ['cryptocurrency'] },
+      {
+        id: 'bitcoin-magazine',
+        name: 'Bitcoin Magazine',
+        type: 'rss',
+        categories: ['cryptocurrency'],
+      },
+
+      // International RSS
+      { id: 'deutsche-welle', name: 'Deutsche Welle', type: 'rss', categories: ['international'] },
+      { id: 'france24', name: 'France24', type: 'rss', categories: ['international'] },
+      { id: 'japan-times', name: 'Japan Times', type: 'rss', categories: ['international'] },
+
+      // Science & Health RSS
+      {
+        id: 'scientific-american',
+        name: 'Scientific American',
+        type: 'rss',
+        categories: ['science'],
+      },
+      { id: 'nature', name: 'Nature', type: 'rss', categories: ['science'] },
+      { id: 'medical-news-today', name: 'Medical News Today', type: 'rss', categories: ['health'] },
+
+      // Sports RSS
+      { id: 'espn', name: 'ESPN', type: 'rss', categories: ['sports'] },
+
+      // Scrapable Sites
+      { id: 'cnn-scraped', name: 'CNN (Scraped)', type: 'scrape', categories: ['general'] },
+      { id: 'bloomberg', name: 'Bloomberg', type: 'scrape', categories: ['finance'] },
+      { id: 'nytimes', name: 'New York Times', type: 'scrape', categories: ['general'] },
+      {
+        id: 'reuters-tech',
+        name: 'Reuters Technology',
+        type: 'scrape',
+        categories: ['technology'],
+      },
+    ];
+  }
+
+  /**
+   * Clear cache
+   */
+  clearCache() {
+    this.cache.clear();
+    logger.info('News aggregator cache cleared');
+  }
+}
+
+export const newsAggregatorService = new NewsAggregatorService();
