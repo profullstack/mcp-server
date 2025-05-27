@@ -1,0 +1,10 @@
+{
+  "timeout": 5000,
+  "ui": "bdd",
+  "checkLeaks": true,
+  "color": true,
+  "extension": ["js"],
+  "package": "./package.json",
+  "recursive": true,
+  "exit": true
+}

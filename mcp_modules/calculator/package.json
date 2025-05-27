@@ -1,0 +1,28 @@
+{
+  "name": "mcp-module-calculator",
+  "version": "1.0.0",
+  "description": "A calculator module for basic mathematical operations",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js --timeout 5000"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "calculator",
+    "math",
+    "arithmetic"
+  ],
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  }
+}

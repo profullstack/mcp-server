@@ -115,3 +115,4 @@ debug/
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+mcp_modules/calculator/pnpm-lock.yaml
