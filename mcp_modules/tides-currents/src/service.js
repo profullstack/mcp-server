@@ -182,48 +182,42 @@ export class TidesService {
         return cached.data;
       }
 
-      const beginDate = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 1); // Add 1 day to create valid range
+      // Use built-in station database instead of API call
+      const commonStations = this.getCommonStations();
+      const station = commonStations.find(s => s.id === stationId);
 
-      const params = new URLSearchParams({
-        product: 'predictions',
-        application: 'MCP_Tides_Module',
-        begin_date: this.formatDate(beginDate),
-        end_date: this.formatDate(endDate),
-        station: stationId,
-        time_zone: 'lst_ldt',
-        units: 'metric',
-        interval: 'hilo',
-        datum: 'MLLW',
-        format: 'json',
-      });
+      if (station) {
+        const stationData = {
+          id: station.id,
+          name: station.name,
+          latitude: station.latitude,
+          longitude: station.longitude,
+          state: station.state,
+          region: station.region,
+          type: station.type,
+          city: station.city,
+        };
 
-      const response = await fetch(`${this.baseUrl}?${params}`, {
-        headers: {
-          'User-Agent': this.userAgent,
-        },
-      });
+        // Cache the result
+        this.cache.set(cacheKey, {
+          data: stationData,
+          timestamp: Date.now(),
+        });
 
-      if (!response.ok) {
-        throw new Error(`Station lookup failed: ${response.status} ${response.statusText}`);
+        return stationData;
+      } else {
+        // Fallback for unknown stations
+        return {
+          id: stationId,
+          name: `Station ${stationId}`,
+          latitude: null,
+          longitude: null,
+          state: null,
+          region: 'Unknown',
+          type: 'unknown',
+          city: 'Unknown',
+        };
       }
-
-      const data = await response.json();
-
-      if (data.error) {
-        throw new Error(`NOAA API error: ${data.error.message}`);
-      }
-
-      const stationData = formatStationData(data);
-
-      // Cache the result
-      this.cache.set(cacheKey, {
-        data: stationData,
-        timestamp: Date.now(),
-      });
-
-      return stationData;
     } catch (error) {
       throw new Error(`Failed to get station metadata: ${error.message}`);
     }
