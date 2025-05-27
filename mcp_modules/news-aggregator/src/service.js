@@ -557,19 +557,37 @@ class NewsAggregatorService {
       'reuters-tech': () => this.getReutersTechNews(),
     };
 
-    for (const source of sources) {
+    // Create promises for all sources to fetch in parallel
+    const sourcePromises = sources.map(async source => {
+      if (!sourceMap[source]) {
+        return { source, error: `Unknown source: ${source}` };
+      }
+
       try {
-        if (sourceMap[source]) {
-          const result = await sourceMap[source]();
-          results.push(result);
-        } else {
-          errors.push(`Unknown source: ${source}`);
-        }
+        const result = await sourceMap[source]();
+        return { source, result };
       } catch (error) {
         logger.error(`Error fetching from ${source}:`, error);
-        errors.push(`${source}: ${error.message}`);
+        return { source, error: error.message };
       }
-    }
+    });
+
+    // Wait for all sources to complete (or fail)
+    const settledResults = await Promise.allSettled(sourcePromises);
+
+    // Process results
+    settledResults.forEach(settled => {
+      if (settled.status === 'fulfilled') {
+        const { source, result, error } = settled.value;
+        if (error) {
+          errors.push(`${source}: ${error}`);
+        } else {
+          results.push(result);
+        }
+      } else {
+        errors.push(`Promise rejected: ${settled.reason}`);
+      }
+    });
 
     return {
       sources: results,
