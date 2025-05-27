@@ -69,7 +69,7 @@ class NewsAggregatorService {
     try {
       logger.info(`Fetching RSS feed from ${url}`);
 
-      // Fetch RSS XML with proxy support
+      // Fetch RSS XML without proxy (RSS feeds work better direct)
       const fetchOptions = {
         headers: {
           'User-Agent':
@@ -78,10 +78,7 @@ class NewsAggregatorService {
         },
       };
 
-      if (this.proxyAgent) {
-        fetchOptions.agent = this.proxyAgent;
-      }
-
+      // Don't use proxy for RSS feeds - they work better with direct connections
       const response = await fetch(url, fetchOptions);
 
       if (!response.ok) {
