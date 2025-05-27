@@ -168,7 +168,11 @@ export async function getAggregatedNews(c) {
     // Parse sources parameter
     let sourceList = ['google', 'hackernews', 'bbc']; // default sources
     if (sources) {
-      sourceList = sources.split(',').map(s => s.trim().toLowerCase());
+      if (sources.toLowerCase() === 'all') {
+        sourceList = newsAggregatorService.getAllSourceIds();
+      } else {
+        sourceList = sources.split(',').map(s => s.trim().toLowerCase());
+      }
     }
 
     const result = await newsAggregatorService.getAggregatedNews(sourceList, category);
@@ -224,7 +228,11 @@ export async function searchNews(c) {
     // Parse sources parameter
     let sourceList = ['google', 'hackernews', 'bbc']; // default sources
     if (sources) {
-      sourceList = sources.split(',').map(s => s.trim().toLowerCase());
+      if (sources.toLowerCase() === 'all') {
+        sourceList = newsAggregatorService.getAllSourceIds();
+      } else {
+        sourceList = sources.split(',').map(s => s.trim().toLowerCase());
+      }
     }
 
     // Get aggregated news

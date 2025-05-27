@@ -163,7 +163,8 @@ export async function register(app) {
         },
         sources: {
           type: 'string',
-          description: 'Comma-separated list of sources for aggregation',
+          description:
+            'Comma-separated list of sources for aggregation, or "all" to use all available sources',
           required: false,
         },
         category: {
@@ -330,9 +331,15 @@ export async function register(app) {
           break;
 
         case 'aggregate':
-          sourceList = params.sources
-            ? params.sources.split(',').map(s => s.trim().toLowerCase())
-            : ['google', 'hackernews', 'bbc'];
+          if (params.sources) {
+            if (params.sources.toLowerCase() === 'all') {
+              sourceList = newsAggregatorService.getAllSourceIds();
+            } else {
+              sourceList = params.sources.split(',').map(s => s.trim().toLowerCase());
+            }
+          } else {
+            sourceList = ['google', 'hackernews', 'bbc'];
+          }
 
           result = await newsAggregatorService.getAggregatedNews(sourceList, params.category);
 
@@ -355,9 +362,15 @@ export async function register(app) {
             return c.json({ error: 'Missing required parameter: keywords for search action' }, 400);
           }
 
-          searchSources = params.sources
-            ? params.sources.split(',').map(s => s.trim().toLowerCase())
-            : ['google', 'hackernews', 'bbc'];
+          if (params.sources) {
+            if (params.sources.toLowerCase() === 'all') {
+              searchSources = newsAggregatorService.getAllSourceIds();
+            } else {
+              searchSources = params.sources.split(',').map(s => s.trim().toLowerCase());
+            }
+          } else {
+            searchSources = ['google', 'hackernews', 'bbc'];
+          }
 
           searchResult = await newsAggregatorService.getAggregatedNews(
             searchSources,

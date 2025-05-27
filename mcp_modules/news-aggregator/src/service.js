@@ -631,6 +631,51 @@ class NewsAggregatorService {
   }
 
   /**
+   * Get all available source IDs
+   */
+  getAllSourceIds() {
+    return [
+      // General News
+      'google',
+      'bbc',
+      'npr',
+      'reuters',
+      'aljazeera',
+      // Finance & Business
+      'cnbc',
+      'yahoo-finance',
+      'marketwatch',
+      'investopedia',
+      'seeking-alpha',
+      // Technology
+      'techcrunch',
+      'the-verge',
+      'hackernews',
+      'ars-technica',
+      'mit-tech-review',
+      // Cryptocurrency
+      'coindesk',
+      'cryptoslate',
+      'bitcoin-magazine',
+      // International
+      'deutsche-welle',
+      'france24',
+      'japan-times',
+      // Science & Health
+      'scientific-american',
+      'nature',
+      'medical-news-today',
+      // Sports
+      'espn',
+      // Scrapable Sites
+      'cnn-scraped',
+      'bloomberg',
+      'nytimes',
+      'reuters-tech',
+    ];
+  }
+
+  /**
    * Clear cache
    */
   clearCache() {
