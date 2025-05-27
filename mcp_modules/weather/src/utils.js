@@ -332,7 +332,24 @@ export async function geocodeLocation(location) {
       };
     }
 
+    // Check for city, state format and try built-in city database first
+    const cityStateMatch = cleanLocation.match(/^([^,]+),\s*([A-Z]{2})$/i);
+    if (cityStateMatch) {
+      const cityName = cityStateMatch[1].trim().toLowerCase();
+      const stateName = cityStateMatch[2].trim().toUpperCase();
+      const cityCoords = await lookupMajorCity(cityName, stateName);
+      if (cityCoords) {
+        return {
+          latitude: cityCoords.lat,
+          longitude: cityCoords.lon,
+          formattedAddress: `${cityCoords.name}, ${stateName}`,
+          source: 'city_database',
+        };
+      }
+    }
+
     // Try Census Bureau geocoding API (free, no API key required)
+    // Note: This works best with specific street addresses
     const encodedLocation = encodeURIComponent(cleanLocation);
     const censusUrl = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodedLocation}&benchmark=2020&format=json`;
 
@@ -375,6 +392,184 @@ export async function geocodeLocation(location) {
   } catch (error) {
     throw new Error(`Geocoding failed: ${error.message}`);
   }
+}
+
+/**
+ * Lookup major US cities by name and state
+ * @param {string} cityName - City name (case insensitive)
+ * @param {string} stateName - State abbreviation (2 letters)
+ * @returns {Object|null} Coordinates and city info or null if not found
+ */
+async function lookupMajorCity(cityName, stateName) {
+  // Database of major US cities with coordinates
+  const majorCities = {
+    'new york': {
+      NY: { lat: 40.7128, lon: -74.006, name: 'New York' },
+    },
+    'los angeles': {
+      CA: { lat: 34.0522, lon: -118.2437, name: 'Los Angeles' },
+    },
+    chicago: {
+      IL: { lat: 41.8781, lon: -87.6298, name: 'Chicago' },
+    },
+    houston: {
+      TX: { lat: 29.7604, lon: -95.3698, name: 'Houston' },
+    },
+    phoenix: {
+      AZ: { lat: 33.4484, lon: -112.074, name: 'Phoenix' },
+    },
+    philadelphia: {
+      PA: { lat: 39.9526, lon: -75.1652, name: 'Philadelphia' },
+    },
+    'san antonio': {
+      TX: { lat: 29.4241, lon: -98.4936, name: 'San Antonio' },
+    },
+    'san diego': {
+      CA: { lat: 32.7157, lon: -117.1611, name: 'San Diego' },
+    },
+    dallas: {
+      TX: { lat: 32.7767, lon: -96.797, name: 'Dallas' },
+    },
+    'san jose': {
+      CA: { lat: 37.3382, lon: -121.8863, name: 'San Jose' },
+    },
+    austin: {
+      TX: { lat: 30.2672, lon: -97.7431, name: 'Austin' },
+    },
+    jacksonville: {
+      FL: { lat: 30.3322, lon: -81.6557, name: 'Jacksonville' },
+    },
+    'fort worth': {
+      TX: { lat: 32.7555, lon: -97.3308, name: 'Fort Worth' },
+    },
+    columbus: {
+      OH: { lat: 39.9612, lon: -82.9988, name: 'Columbus' },
+    },
+    charlotte: {
+      NC: { lat: 35.2271, lon: -80.8431, name: 'Charlotte' },
+    },
+    'san francisco': {
+      CA: { lat: 37.7749, lon: -122.4194, name: 'San Francisco' },
+    },
+    indianapolis: {
+      IN: { lat: 39.7684, lon: -86.1581, name: 'Indianapolis' },
+    },
+    seattle: {
+      WA: { lat: 47.6062, lon: -122.3321, name: 'Seattle' },
+    },
+    denver: {
+      CO: { lat: 39.7392, lon: -104.9903, name: 'Denver' },
+    },
+    washington: {
+      DC: { lat: 38.9072, lon: -77.0369, name: 'Washington' },
+    },
+    boston: {
+      MA: { lat: 42.3601, lon: -71.0589, name: 'Boston' },
+    },
+    'el paso': {
+      TX: { lat: 31.7619, lon: -106.485, name: 'El Paso' },
+    },
+    detroit: {
+      MI: { lat: 42.3314, lon: -83.0458, name: 'Detroit' },
+    },
+    nashville: {
+      TN: { lat: 36.1627, lon: -86.7816, name: 'Nashville' },
+    },
+    portland: {
+      OR: { lat: 45.5152, lon: -122.6784, name: 'Portland' },
+    },
+    memphis: {
+      TN: { lat: 35.1495, lon: -90.049, name: 'Memphis' },
+    },
+    'oklahoma city': {
+      OK: { lat: 35.4676, lon: -97.5164, name: 'Oklahoma City' },
+    },
+    'las vegas': {
+      NV: { lat: 36.1699, lon: -115.1398, name: 'Las Vegas' },
+    },
+    louisville: {
+      KY: { lat: 38.2527, lon: -85.7585, name: 'Louisville' },
+    },
+    baltimore: {
+      MD: { lat: 39.2904, lon: -76.6122, name: 'Baltimore' },
+    },
+    milwaukee: {
+      WI: { lat: 43.0389, lon: -87.9065, name: 'Milwaukee' },
+    },
+    albuquerque: {
+      NM: { lat: 35.0844, lon: -106.6504, name: 'Albuquerque' },
+    },
+    tucson: {
+      AZ: { lat: 32.2226, lon: -110.9747, name: 'Tucson' },
+    },
+    fresno: {
+      CA: { lat: 36.7378, lon: -119.7871, name: 'Fresno' },
+    },
+    sacramento: {
+      CA: { lat: 38.5816, lon: -121.4944, name: 'Sacramento' },
+    },
+    mesa: {
+      AZ: { lat: 33.4152, lon: -111.8315, name: 'Mesa' },
+    },
+    'kansas city': {
+      MO: { lat: 39.0997, lon: -94.5786, name: 'Kansas City' },
+    },
+    atlanta: {
+      GA: { lat: 33.749, lon: -84.388, name: 'Atlanta' },
+    },
+    'long beach': {
+      CA: { lat: 33.7701, lon: -118.1937, name: 'Long Beach' },
+    },
+    'colorado springs': {
+      CO: { lat: 38.8339, lon: -104.8214, name: 'Colorado Springs' },
+    },
+    raleigh: {
+      NC: { lat: 35.7796, lon: -78.6382, name: 'Raleigh' },
+    },
+    miami: {
+      FL: { lat: 25.7617, lon: -80.1918, name: 'Miami' },
+    },
+    'virginia beach': {
+      VA: { lat: 36.8529, lon: -75.978, name: 'Virginia Beach' },
+    },
+    omaha: {
+      NE: { lat: 41.2524, lon: -95.998, name: 'Omaha' },
+    },
+    oakland: {
+      CA: { lat: 37.8044, lon: -122.2712, name: 'Oakland' },
+    },
+    minneapolis: {
+      MN: { lat: 44.9778, lon: -93.265, name: 'Minneapolis' },
+    },
+    tulsa: {
+      OK: { lat: 36.154, lon: -95.9928, name: 'Tulsa' },
+    },
+    arlington: {
+      TX: { lat: 32.7357, lon: -97.1081, name: 'Arlington' },
+    },
+    tampa: {
+      FL: { lat: 27.9506, lon: -82.4572, name: 'Tampa' },
+    },
+    'new orleans': {
+      LA: { lat: 29.9511, lon: -90.0715, name: 'New Orleans' },
+    },
+    wichita: {
+      KS: { lat: 37.6872, lon: -97.3301, name: 'Wichita' },
+    },
+    cleveland: {
+      OH: { lat: 41.4993, lon: -81.6944, name: 'Cleveland' },
+    },
+    bakersfield: {
+      CA: { lat: 35.3733, lon: -119.0187, name: 'Bakersfield' },
+    },
+  };
+
+  const cityData = majorCities[cityName.toLowerCase()];
+  if (cityData && cityData[stateName]) {
+    return cityData[stateName];
+  }
+
+  return null;
 }
 
 /**
