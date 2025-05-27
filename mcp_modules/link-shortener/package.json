@@ -1,0 +1,31 @@
+{
+  "name": "mcp-module-link-shortener",
+  "version": "1.0.0",
+  "description": "Link Shortener module using hynt.us API for creating short URLs",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js --timeout 10000"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "link",
+    "shortener",
+    "url",
+    "hynt",
+    "redirect",
+    "api"
+  ],
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  }
+}
