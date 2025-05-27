@@ -195,6 +195,7 @@ export class TidesService {
         time_zone: 'lst_ldt',
         units: 'metric',
         interval: 'hilo',
+        datum: 'MLLW',
         format: 'json',
       });
 
