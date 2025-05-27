@@ -20,6 +20,10 @@ cp etc/mcp-server.service /etc/systemd/system/
 # Set proper permissions
 chmod 644 /etc/systemd/system/mcp-server.service
 
+# Stop the service if it's running (ignore errors)
+echo "Stopping existing service if running..."
+systemctl stop mcp-server.service 2>/dev/null || true
+
 # Create log directory if it doesn't exist
 mkdir -p /var/log
 touch /var/log/mcp-server.log

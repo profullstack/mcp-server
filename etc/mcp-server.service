@@ -4,26 +4,16 @@ After=network.target
 
 [Service]
 Type=simple
-User=${SERVICE_USER:-ubuntu}
-Group=${SERVICE_GROUP:-ubuntu}
-WorkingDirectory=${SERVICE_WORKING_DIR:-/home/ubuntu/www/convert2doc.com/pdf}
-ExecStart=/bin/zsh ${START_SCRIPT:-/home/ubuntu/www/convert2doc.com/pdf/bin/start.sh}
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/www/profullstack.com/mcp-server
+ExecStart=/bin/zsh /home/ubuntu/www/profullstack.com/mcp-server/bin/start.sh
 Restart=on-failure
-RestartSec=10
-
-# Log to files instead of journal
-StandardOutput=append:/var/log/${SERVICE_NAME:-convert2doc-pdf}.log
-StandardError=append:/var/log/${SERVICE_NAME:-convert2doc-pdf}.error.log
-
-# Environment
-Environment=NODE_ENV=${NODE_ENV:-production}
-Environment=PATH=${PATH:-/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/home/ubuntu/.local/share/pnpm:/home/ubuntu/.npm/pnpm/bin}
-Environment=HOME=${HOME:-/home/ubuntu}
-
-# Hardening
-ProtectSystem=full
-PrivateTmp=true
-NoNewPrivileges=true
+RestartSec=5
+StandardOutput=append:/var/log/mcp-server.log
+StandardError=append:/var/log/mcp-server-error.log
+EnvironmentFile=/home/ubuntu/www/profullstack/mcp-server/.env
+Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
