@@ -182,11 +182,15 @@ export class TidesService {
         return cached.data;
       }
 
+      const beginDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 1); // Add 1 day to create valid range
+
       const params = new URLSearchParams({
         product: 'predictions',
         application: 'MCP_Tides_Module',
-        begin_date: this.formatDate(new Date()),
-        end_date: this.formatDate(new Date()),
+        begin_date: this.formatDate(beginDate),
+        end_date: this.formatDate(endDate),
         station: stationId,
         time_zone: 'lst_ldt',
         units: 'metric',
