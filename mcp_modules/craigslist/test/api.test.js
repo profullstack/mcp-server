@@ -24,16 +24,16 @@ describe('Craigslist API', () => {
   });
 
   describe('API Functions', () => {
-    it('should export searchCity function', () => {
+    it('should export searchCraigslist function', () => {
       // Import the API functions dynamically to test exports
       import('../api.js').then(api => {
-        expect(api.searchCity).to.be.a('function');
+        expect(api.searchCraigslist).to.be.a('function');
       });
     });
 
-    it('should export search function', () => {
+    it('should export searchCraigslist function', () => {
       import('../api.js').then(api => {
-        expect(api.search).to.be.a('function');
+        expect(api.searchCraigslist).to.be.a('function');
       });
     });
 
@@ -47,21 +47,34 @@ describe('Craigslist API', () => {
       // Import the API functions
       const api = await import('../api.js');
 
-      // Test with a clearly invalid city that should return empty results
-      const results = await api.searchCity('nonexistent-invalid-city-12345', {
-        category: 'sss',
-        query: 'test',
-      });
+      try {
+        // Test with a clearly invalid city that should throw an error
+        await api.searchCraigslist({
+          city: 'nonexistent-invalid-city-12345',
+          category: 'sss',
+          query: 'test',
+        });
 
-      // Should return an array (even if empty)
-      expect(results).to.be.an('array');
+        // If we get here, the function didn't throw (unexpected)
+        expect.fail('Expected function to throw an error for invalid city');
+      } catch (error) {
+        // Should throw an error for invalid city
+        expect(error).to.be.an('error');
+        expect(error.message).to.include('ERR_NAME_NOT_RESOLVED');
+      }
     });
 
-    it('should handle search function with empty cities array', async () => {
+    it('should handle search function with empty cities array', async function () {
+      // Increase timeout for this test since it makes a real request
+      this.timeout(10000);
+
       const api = await import('../api.js');
 
-      // Test with empty cities array
-      const results = await api.search([], { category: 'sss' });
+      // Test with empty cities array - this should return empty results quickly
+      const results = await api.searchCraigslist({
+        cities: [],
+        category: 'sss',
+      });
 
       // Should return an empty array
       expect(results).to.be.an('array').that.is.empty;
@@ -72,15 +85,14 @@ describe('Craigslist API', () => {
 
       try {
         // Test with clearly invalid URL
-        const details = await api.getPostingDetails(
-          'https://invalid-nonexistent-domain-12345.com/test'
-        );
+        await api.getPostingDetails('https://invalid-nonexistent-domain-12345.com/test');
 
-        // Should return null or handle gracefully
-        expect(details).to.be.null;
+        // If we get here, the function didn't throw (unexpected)
+        expect.fail('Expected function to throw an error for invalid URL');
       } catch (error) {
-        // If it throws an error, that's also acceptable behavior
+        // Should throw an error for invalid URL
         expect(error).to.be.an('error');
+        expect(error.message).to.include('ERR_NAME_NOT_RESOLVED');
       }
     });
   });

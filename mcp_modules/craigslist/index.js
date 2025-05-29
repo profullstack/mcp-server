@@ -8,7 +8,10 @@
 import { logger } from '../../src/utils/logger.js';
 import cities from './cities.js';
 import categories from './categories.js';
-import { search, getPostingDetails } from './api.js';
+import { CraigslistAPI } from './lib/api-refactored.js';
+
+// Create a singleton instance of the refactored API
+const craigslistAPI = new CraigslistAPI();
 
 /**
  * Register this module with the Hono app
@@ -66,8 +69,20 @@ export async function register(app) {
         fetchDetails: params.fetchDetails || false, // Whether to fetch detailed attributes
       };
 
-      // Perform the search
-      const results = await search(citiesToSearch, searchOptions);
+      // Perform the search using the refactored API
+      const searchParams = {
+        cities: citiesToSearch.slice(0, searchOptions.limit),
+        query: searchOptions.query,
+        category: searchOptions.category,
+        filters: searchOptions.filters,
+        limit: 100, // Default limit per city
+        fetchDetails: searchOptions.fetchDetails,
+      };
+
+      const results = await craigslistAPI.searchMultipleCities(
+        searchParams,
+        citiesToSearch.slice(0, searchOptions.limit)
+      );
 
       return c.json({
         query: params.query,
@@ -94,8 +109,8 @@ export async function register(app) {
         return c.json({ error: 'URL is required' }, 400);
       }
 
-      // Get posting details
-      const details = await getPostingDetails(params.url);
+      // Get posting details using the refactored API
+      const details = await craigslistAPI.getPostingDetails(params.url);
 
       if (!details) {
         return c.json({ error: 'Failed to get posting details' }, 404);
@@ -184,8 +199,20 @@ export async function register(app) {
         fetchDetails: params.fetchDetails || false, // Whether to fetch detailed attributes
       };
 
-      // Perform the search
-      const results = await search(citiesToSearch, searchOptions);
+      // Perform the search using the refactored API
+      const searchParams = {
+        cities: citiesToSearch.slice(0, searchOptions.limit),
+        query: searchOptions.query,
+        category: searchOptions.category,
+        filters: searchOptions.filters,
+        limit: 100, // Default limit per city
+        fetchDetails: searchOptions.fetchDetails,
+      };
+
+      const results = await craigslistAPI.searchMultipleCities(
+        searchParams,
+        citiesToSearch.slice(0, searchOptions.limit)
+      );
 
       return c.json({
         tool: 'craigslist',
