@@ -1465,13 +1465,14 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
         if (linkElement) {
           const href = linkElement.getAttribute('href');
           if (href) {
-            // Handle relative URLs
-            if (href.startsWith('/')) {
-              details.url = `https://${city}.craigslist.org${href}`;
-            } else if (!href.startsWith('http')) {
-              details.url = `https://${city}.craigslist.org/${href}`;
-            } else {
+            // Handle relative URLs - ensure we get proper full URLs
+            if (href.startsWith('http')) {
               details.url = href;
+            } else if (href.startsWith('/')) {
+              details.url = `https://${city}.craigslist.org${href}`;
+            } else {
+              // For relative URLs without leading slash, add one
+              details.url = `https://${city}.craigslist.org/${href}`;
             }
 
             // Try to extract post ID from URL - multiple patterns
@@ -1857,6 +1858,15 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
           finalUrl = `https://${city}.craigslist.org/${subcity}/${category}/d/${slug}/${listing.postId}.html`;
           logger.debug(`Constructed direct posting URL from ID: ${finalUrl}`);
         }
+        // If the URL looks like it has a numeric ID but it's too short, it's probably invalid
+        else if (
+          directUrl &&
+          directUrl.match(/\/d\/[^/]+\/(\d+)\.html$/) &&
+          directUrl.match(/\/d\/[^/]+\/(\d+)\.html$/)[1].length < 7
+        ) {
+          logger.debug(`URL has invalid short ID, skipping: ${directUrl}`);
+          finalUrl = ''; // Mark as invalid
+        }
         // If the URL doesn't look like a direct posting URL, try to extract a post ID
         else if (directUrl && (!directUrl.includes('/d/') || !directUrl.includes('.html'))) {
           const postIdMatch = directUrl.match(/\/(\d+)(?:\.html)?$/);
@@ -1957,10 +1967,10 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
 
       // Filter out results with invalid URLs or missing post IDs
       const validResults = results.filter(result => {
-        // Check if we have a valid post ID
+        // Check if we have a valid post ID (must be 7+ digits)
         const hasValidPostId = result.id && result.id !== 'null' && /^\d{7,}$/.test(result.id);
 
-        // Check if URL is valid
+        // Check if URL is valid and has proper posting ID format
         const isValidUrl =
           result.url &&
           result.url.startsWith('https://') &&
@@ -1969,11 +1979,20 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
           !result.url.endsWith(`/${category}/`) &&
           result.url.match(/\/\d{7,}\.html$/); // Must end with a numeric ID (7+ digits) and .html
 
-        const isValid = hasValidPostId && isValidUrl;
+        // Additional check: extract ID from URL and verify it matches the result ID
+        let urlId = null;
+        const urlIdMatch = result.url.match(/\/(\d+)\.html$/);
+        if (urlIdMatch && urlIdMatch[1]) {
+          urlId = urlIdMatch[1];
+        }
+
+        const idsMatch = hasValidPostId && urlId && urlId === result.id;
+
+        const isValid = hasValidPostId && isValidUrl && idsMatch;
 
         if (!isValid) {
           logger.debug(
-            `Filtering out result - hasValidPostId: ${hasValidPostId}, isValidUrl: ${isValidUrl}, URL: ${result.url}, ID: ${result.id}`
+            `Filtering out result - hasValidPostId: ${hasValidPostId}, isValidUrl: ${isValidUrl}, idsMatch: ${idsMatch}, URL: ${result.url}, ID: ${result.id}, URL ID: ${urlId}`
           );
         }
 
@@ -2772,6 +2791,31 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
 
         const detailProcessor = async result => {
           try {
+            // Validate URL before attempting to fetch details
+            const hasValidPostId = result.id && result.id !== 'null' && /^\d{7,}$/.test(result.id);
+            const isValidUrl =
+              result.url &&
+              result.url.startsWith('https://') &&
+              result.url.includes('/d/') &&
+              result.url.includes('.html') &&
+              result.url.match(/\/\d{7,}\.html$/);
+
+            // Extract ID from URL and verify it matches the result ID
+            let urlId = null;
+            const urlIdMatch = result.url.match(/\/(\d+)\.html$/);
+            if (urlIdMatch && urlIdMatch[1]) {
+              urlId = urlIdMatch[1];
+            }
+
+            const idsMatch = hasValidPostId && urlId && urlId === result.id;
+
+            if (!hasValidPostId || !isValidUrl || !idsMatch) {
+              logger.debug(
+                `Skipping detail fetch for invalid result - hasValidPostId: ${hasValidPostId}, isValidUrl: ${isValidUrl}, idsMatch: ${idsMatch}, URL: ${result.url}, ID: ${result.id}, URL ID: ${urlId}`
+              );
+              return null; // Skip this result
+            }
+
             const details = await getPostingDetails(result.url);
             if (details && details.attributes) {
               // Extract the ID from the URL to ensure consistency
@@ -2821,6 +2865,10 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
 
       // Filter out results with invalid URLs
       const validResults = results.filter(result => {
+        // Check if we have a valid post ID (must be 7+ digits)
+        const hasValidPostId = result.id && result.id !== 'null' && /^\d{7,}$/.test(result.id);
+
+        // Check if URL is valid and has proper posting ID format
         const isValidUrl =
           result.url &&
           result.url.startsWith('https://') &&
@@ -2829,11 +2877,24 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
           !result.url.endsWith(`/${category}/`) &&
           result.url.match(/\/\d{7,}\.html$/); // Must end with a numeric ID (7+ digits) and .html
 
-        if (!isValidUrl) {
-          logger.debug(`Filtering out result with invalid URL: ${result.url}`);
+        // Additional check: extract ID from URL and verify it matches the result ID
+        let urlId = null;
+        const urlIdMatch = result.url.match(/\/(\d+)\.html$/);
+        if (urlIdMatch && urlIdMatch[1]) {
+          urlId = urlIdMatch[1];
         }
 
-        return isValidUrl;
+        const idsMatch = hasValidPostId && urlId && urlId === result.id;
+
+        const isValid = hasValidPostId && isValidUrl && idsMatch;
+
+        if (!isValid) {
+          logger.debug(
+            `Filtering out result - hasValidPostId: ${hasValidPostId}, isValidUrl: ${isValidUrl}, idsMatch: ${idsMatch}, URL: ${result.url}, ID: ${result.id}, URL ID: ${urlId}`
+          );
+        }
+
+        return isValid;
       });
 
       logger.debug(
@@ -3054,6 +3115,31 @@ export async function search(cities, options) {
 
       const detailProcessor = async result => {
         try {
+          // Validate URL before attempting to fetch details
+          const hasValidPostId = result.id && result.id !== 'null' && /^\d{7,}$/.test(result.id);
+          const isValidUrl =
+            result.url &&
+            result.url.startsWith('https://') &&
+            result.url.includes('/d/') &&
+            result.url.includes('.html') &&
+            result.url.match(/\/\d{7,}\.html$/);
+
+          // Extract ID from URL and verify it matches the result ID
+          let urlId = null;
+          const urlIdMatch = result.url.match(/\/(\d+)\.html$/);
+          if (urlIdMatch && urlIdMatch[1]) {
+            urlId = urlIdMatch[1];
+          }
+
+          const idsMatch = hasValidPostId && urlId && urlId === result.id;
+
+          if (!hasValidPostId || !isValidUrl || !idsMatch) {
+            logger.debug(
+              `Skipping detail fetch for invalid result - hasValidPostId: ${hasValidPostId}, isValidUrl: ${isValidUrl}, idsMatch: ${idsMatch}, URL: ${result.url}, ID: ${result.id}, URL ID: ${urlId}`
+            );
+            return null; // Skip this result
+          }
+
           const details = await getPostingDetails(result.url);
           if (details && details.attributes) {
             // Extract the ID from the URL to ensure consistency
