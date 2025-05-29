@@ -32,6 +32,12 @@ export function parseSearchResults(html, city) {
       'li.cl-search-result',
       'li.result-row',
       '.cl-static-search-result',
+      '.gallery-card', // New modern Craigslist UI
+      '.maptable .result-row', // Map view results
+      'ul.rows li.result-row', // Another common pattern
+      '.content ul.rows li', // Generic list pattern
+      'li[data-pid]', // Items with posting IDs
+      'a[data-id]', // Links with data-id attributes
     ];
 
     let results = [];
@@ -44,8 +50,45 @@ export function parseSearchResults(html, city) {
       }
     }
 
+    // If no results found with specific selectors, try a more generic approach
+    if (results.length === 0) {
+      logger.warn('No search results found with specific selectors, trying generic approach');
+
+      // Look for any links that might be posting links
+      const allLinks = document.querySelectorAll('a[href*=".html"]');
+      if (allLinks.length > 0) {
+        logger.info(`Found ${allLinks.length} potential posting links`);
+
+        // Filter links that look like Craigslist posting links
+        const postingLinks = Array.from(allLinks).filter(link => {
+          const href = link.getAttribute('href');
+          return (
+            href &&
+            (href.includes('/d/') || href.match(/\/\d+\.html$/) || href.includes('craigslist.org'))
+          );
+        });
+
+        if (postingLinks.length > 0) {
+          logger.info(`Found ${postingLinks.length} likely posting links`);
+
+          // Create result elements from these links
+          results = postingLinks.map(link => {
+            const container = document.createElement('div');
+            container.appendChild(link.cloneNode(true));
+            return container;
+          });
+        }
+      }
+    }
+
     if (results.length === 0) {
       logger.warn('No search results found with any selector');
+
+      // Save the HTML for debugging - using a separate async function
+      saveDebugHTML(html, city, 'no-selectors').catch(err => {
+        logger.error(`Failed to save debug HTML: ${err.message}`);
+      });
+
       return [];
     }
 
@@ -398,4 +441,30 @@ export function isErrorPage(html) {
 
   const lowerHtml = html.toLowerCase();
   return errorIndicators.some(indicator => lowerHtml.includes(indicator.toLowerCase()));
+}
+
+/**
+ * Save HTML content to a debug file
+ * @param {string} html - HTML content to save
+ * @param {string} city - City code for filename
+ * @param {string} prefix - Prefix for the filename
+ * @returns {Promise<void>}
+ */
+async function saveDebugHTML(html, city, prefix) {
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    const debugDir = path.join(process.cwd(), 'debug');
+
+    // Create debug directory if it doesn't exist
+    await fs.promises.mkdir(debugDir, { recursive: true });
+
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const filename = path.join(debugDir, `${prefix}-${city}-${timestamp}.html`);
+
+    await fs.promises.writeFile(filename, html);
+    logger.info(`Saved debug HTML to ${filename}`);
+  } catch (error) {
+    logger.error(`Failed to save debug HTML: ${error.message}`);
+  }
 }

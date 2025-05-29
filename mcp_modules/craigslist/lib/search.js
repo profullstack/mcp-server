@@ -27,17 +27,44 @@ export async function searchCraigslist(params) {
     limit = 100,
     includeDetails = false,
     usePuppeteer = true,
+    isDirectSearch = false, // Flag to indicate direct search vs. multi-city search
+    isNestedCall = false, // Flag to prevent infinite recursion
   } = params;
 
   try {
+    // Validate city if provided
+    if (city && city !== 'sandiego') {
+      // Simple validation to check if city looks like a valid domain name component
+      const validCityRegex = /^[a-z0-9-]{2,50}$/;
+      if (!validCityRegex.test(city)) {
+        throw new Error(`Invalid city format: ${city}`);
+      }
+    }
+
     logger.info(
       `Starting Craigslist search: query="${query}", category="${category}", city="${city}"`
     );
 
-    // If multiple cities are specified, process them in parallel
-    if (cities && cities.length > 0) {
-      return await searchMultipleCities({ ...params, cities });
+    // If cities array is provided and this is not a direct search
+    if (Array.isArray(cities) && !isDirectSearch) {
+      // Only return empty results if cities array is empty AND this is the top-level call
+      if (cities.length === 0 && !isNestedCall) {
+        logger.info('Empty cities array provided, returning empty results');
+        return [];
+      }
+
+      // Prevent infinite recursion by checking if this is already a nested call
+      if (!isNestedCall) {
+        logger.info(`Delegating to searchMultipleCities with ${cities.length} cities`);
+        return await searchMultipleCities({
+          ...params,
+          isNestedCall: true,
+        });
+      }
     }
+
+    // If we have a city parameter, we should use it for direct search
+    logger.info(`Performing direct search for city: ${city}`);
 
     // Single city search
     const searchUrl = buildSearchUrl({ query, category, city, subcategory, minPrice, maxPrice });
@@ -95,12 +122,31 @@ export async function searchCraigslist(params) {
 async function searchMultipleCities(params) {
   const { cities, ...searchParams } = params;
 
+  // Validate cities array
+  if (!Array.isArray(cities) || cities.length === 0) {
+    logger.warn('Invalid or empty cities array provided to searchMultipleCities');
+    return [];
+  }
+
   logger.info(`Searching ${cities.length} cities in parallel`);
 
   const cityProcessor = async city => {
     try {
-      const cityResults = await searchCraigslist({ ...searchParams, city });
-      return cityResults.map(result => ({ ...result, city }));
+      logger.info(`Processing city ${city} with direct search`);
+      // Pass isDirectSearch flag to prevent recursion
+      const cityResults = await searchCraigslist({
+        ...searchParams,
+        city,
+        isDirectSearch: true,
+      });
+
+      if (cityResults && cityResults.length > 0) {
+        logger.info(`Found ${cityResults.length} results for city ${city}`);
+        return cityResults.map(result => ({ ...result, city }));
+      } else {
+        logger.warn(`No results found for city ${city}`);
+        return [];
+      }
     } catch (error) {
       logger.error(`Error searching city ${city}: ${error.message}`);
       return [];
@@ -122,20 +168,97 @@ async function fetchSearchResults(searchUrl, city, usePuppeteer = true) {
   try {
     logger.info(`Fetching search results from: ${searchUrl}`);
 
-    const response = usePuppeteer
-      ? await fetchWithPuppeteer(searchUrl)
-      : await fetchWithRetry(searchUrl);
+    // Add debug logging
+    logger.debug(`Search URL: ${searchUrl}, City: ${city}, UsePuppeteer: ${usePuppeteer}`);
 
-    const html = await response.text();
+    // Try a direct fetch first to see if we can get results
+    let response;
+    let html;
 
+    try {
+      // First try with Puppeteer if enabled
+      if (usePuppeteer) {
+        logger.info(`Using Puppeteer to fetch: ${searchUrl}`);
+        response = await fetchWithPuppeteer(searchUrl);
+      } else {
+        logger.info(`Using direct HTTP fetch: ${searchUrl}`);
+        response = await fetchWithRetry(searchUrl);
+      }
+
+      html = await response.text();
+      logger.info(`Received HTML response of length: ${html.length}`);
+
+      // Check if we got a valid response
+      if (html.length < 1000) {
+        logger.warn(
+          `Suspiciously short HTML response (${html.length} chars), might be an error page`
+        );
+        logger.debug(`Short HTML content: ${html}`);
+      }
+    } catch (fetchError) {
+      logger.error(`Error during initial fetch: ${fetchError.message}`);
+
+      // If Puppeteer failed, try direct HTTP fetch as fallback
+      if (usePuppeteer) {
+        logger.info('Puppeteer fetch failed, trying direct HTTP fetch as fallback');
+        try {
+          response = await fetchWithRetry(searchUrl);
+          html = await response.text();
+          logger.info(`Fallback fetch successful, received ${html.length} chars`);
+        } catch (fallbackError) {
+          logger.error(`Fallback fetch also failed: ${fallbackError.message}`);
+          throw fallbackError;
+        }
+      } else {
+        throw fetchError;
+      }
+    }
+
+    // Check if it's an error page
     if (isErrorPage(html)) {
+      logger.warn(`Error page detected for URL: ${searchUrl}`);
+
+      // Save the error page for debugging
+      try {
+        const fs = await import('fs');
+        const path = await import('path');
+        const debugDir = path.join(process.cwd(), 'debug');
+        await fs.promises.mkdir(debugDir, { recursive: true });
+        const timestamp = new Date().toISOString().replace(/:/g, '-');
+        const filename = path.join(debugDir, `error-page-${city}-${timestamp}.html`);
+        await fs.promises.writeFile(filename, html);
+        logger.info(`Saved error page HTML to ${filename}`);
+      } catch (fsError) {
+        logger.error(`Failed to save error page HTML: ${fsError.message}`);
+      }
+
       throw new Error('Search page returned an error or no results');
     }
 
+    // Parse the results
     const results = parseSearchResults(html, city);
+    logger.info(`Parsed ${results.length} results from search page`);
 
     if (results.length === 0) {
       logger.warn('No results found in search page HTML');
+
+      // Debug: Save the HTML to a file for inspection
+      try {
+        const fs = await import('fs');
+        const path = await import('path');
+        const debugDir = path.join(process.cwd(), 'debug');
+
+        // Create debug directory if it doesn't exist
+        await fs.promises.mkdir(debugDir, { recursive: true });
+
+        const timestamp = new Date().toISOString().replace(/:/g, '-');
+        const filename = path.join(debugDir, `empty-results-${city}-${timestamp}.html`);
+
+        await fs.promises.writeFile(filename, html);
+        logger.info(`Saved empty results HTML to ${filename}`);
+      } catch (fsError) {
+        logger.error(`Failed to save debug HTML: ${fsError.message}`);
+      }
     }
 
     return results;
@@ -162,35 +285,49 @@ function buildSearchUrl(params) {
 
   // Start with base URL
   const baseUrl = BASE_URL.replace('{city}', city);
+  logger.debug(`Base URL: ${baseUrl}`);
 
   // Build category path
   let categoryPath = `/search/${category}`;
   if (subcategory) {
     categoryPath += `/${subcategory}`;
   }
+  logger.debug(`Category path: ${categoryPath}`);
 
   // Create URL object
   const url = new URL(categoryPath, baseUrl);
+  logger.debug(`Initial URL: ${url.toString()}`);
 
   // Add query parameter
   if (query) {
     url.searchParams.set('query', query);
+    logger.debug(`Added query parameter: ${query}`);
   }
 
   // Add price filters
   if (minPrice !== null && minPrice > 0) {
     url.searchParams.set('min_price', minPrice.toString());
+    logger.debug(`Added min_price parameter: ${minPrice}`);
   }
 
   if (maxPrice !== null && maxPrice > 0) {
     url.searchParams.set('max_price', maxPrice.toString());
+    logger.debug(`Added max_price parameter: ${maxPrice}`);
   }
 
   // Add other common parameters
   url.searchParams.set('sort', 'rel'); // Sort by relevance
   url.searchParams.set('bundleDuplicates', '1'); // Bundle duplicates
 
-  return url.toString();
+  // Try direct search for "free" items
+  if (query.toLowerCase() === 'free') {
+    url.searchParams.set('is_free', 'yes');
+    logger.debug('Added is_free=yes parameter for free items');
+  }
+
+  const finalUrl = url.toString();
+  logger.info(`Final search URL: ${finalUrl}`);
+  return finalUrl;
 }
 
 /**
