@@ -18,6 +18,84 @@ puppeteer.use(StealthPlugin());
 // Get proxy URL from environment variables
 const PROXY_URL = process.env.WEBSHARE_PROXY;
 
+// Configuration for parallel processing
+const PARALLEL_CONFIG = {
+  // Maximum number of concurrent city searches
+  MAX_CONCURRENT_CITIES: parseInt(process.env.MAX_CONCURRENT_CITIES) || 10,
+  // Maximum number of concurrent posting detail fetches
+  MAX_CONCURRENT_DETAILS: parseInt(process.env.MAX_CONCURRENT_DETAILS) || 10,
+  // Delay between batches (ms)
+  BATCH_DELAY: parseInt(process.env.BATCH_DELAY) || 1000,
+  // Delay between individual requests (ms)
+  REQUEST_DELAY: parseInt(process.env.REQUEST_DELAY) || 500,
+};
+
+/**
+ * Process items in parallel with configurable concurrency
+ * @param {Array} items - Items to process
+ * @param {Function} processor - Function to process each item
+ * @param {number} maxConcurrent - Maximum concurrent operations
+ * @param {number} batchDelay - Delay between batches in ms
+ * @returns {Promise<Array>} Results array
+ */
+async function processInParallel(items, processor, maxConcurrent = 10, batchDelay = 1000) {
+  const results = [];
+  const total = items.length;
+
+  logger.info(`Processing ${total} items with max concurrency: ${maxConcurrent}`);
+
+  for (let i = 0; i < total; i += maxConcurrent) {
+    const batch = items.slice(i, i + maxConcurrent);
+    const batchNumber = Math.floor(i / maxConcurrent) + 1;
+    const totalBatches = Math.ceil(total / maxConcurrent);
+
+    logger.info(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);
+
+    try {
+      // Process batch in parallel
+      const batchPromises = batch.map(async (item, index) => {
+        try {
+          // Add a small staggered delay to avoid overwhelming the server
+          const staggerDelay = index * (PARALLEL_CONFIG.REQUEST_DELAY / maxConcurrent);
+          if (staggerDelay > 0) {
+            await delay(staggerDelay);
+          }
+
+          const result = await processor(item);
+          logger.debug(`Completed item ${i + index + 1}/${total}`);
+          return result;
+        } catch (error) {
+          logger.error(`Error processing item ${i + index + 1}: ${error.message}`);
+          return null; // Return null for failed items
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+
+      logger.info(
+        `Batch ${batchNumber}/${totalBatches} completed. Total results: ${results.filter(r => r !== null).length}/${results.length}`
+      );
+
+      // Add delay between batches (except for the last batch)
+      if (i + maxConcurrent < total) {
+        logger.debug(`Waiting ${batchDelay}ms before next batch...`);
+        await delay(batchDelay);
+      }
+    } catch (error) {
+      logger.error(`Error processing batch ${batchNumber}: ${error.message}`);
+      // Continue with next batch even if current batch fails
+    }
+  }
+
+  const successfulResults = results.filter(result => result !== null);
+  logger.info(
+    `Parallel processing completed: ${successfulResults.length}/${total} items successful`
+  );
+
+  return successfulResults;
+}
+
 // Array of user agents to rotate through
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -123,14 +201,17 @@ async function getBrowser() {
         logger.info('Running without proxy');
       }
 
-      // Try to find an available browser executable
+      // Force Chromium usage - prioritize Chromium paths over Chrome
       const possibleBrowserPaths = [
-        chromePath, // Environment variable
-        '/snap/bin/chromium', // Snap-installed Chromium (often more reliable)
-        '/usr/bin/google-chrome-stable',
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/usr/bin/google-chrome',
+        '/usr/bin/chromium', // Standard Chromium installation
+        '/usr/bin/chromium-browser', // Alternative Chromium name
+        '/snap/bin/chromium', // Snap-installed Chromium
+        '/usr/bin/chromium-stable', // Stable Chromium
+        '/opt/chromium/chromium', // Custom Chromium installation
+        chromiumPath, // Explicitly defined Chromium path
+        chromePath, // Environment variable (fallback)
+        '/usr/bin/google-chrome-stable', // Chrome as last resort
+        '/usr/bin/google-chrome', // Chrome as last resort
       ].filter(Boolean);
 
       let executablePath = null;
@@ -1106,6 +1187,12 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
   // Log the first 500 characters of the HTML for debugging
   logger.debug(`Parsing search results HTML (first 500 chars): ${html.substring(0, 500)}...`);
 
+  // Check if this is a gallery view page
+  const isGalleryView = html.includes('cl-search-view-mode-gallery');
+  if (isGalleryView) {
+    logger.info('Detected gallery view search results page');
+  }
+
   // Additional debugging: log key indicators (updated for new Craigslist structure)
   const indicators = [
     'result-data',
@@ -1116,6 +1203,7 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
     'result-row',
     'gallery-card',
     'cl-search-result',
+    'cl-search-view-mode-gallery', // Gallery view indicator
     'result-info',
     'result-title', // Legacy
     'result-image',
@@ -1134,6 +1222,7 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
     'card',
     'title',
     'price',
+    'priceinfo', // Gallery view price selector
     'date',
     'location',
     'href="/',
@@ -1183,7 +1272,8 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
     const listingSelectors = [
       '.result-data', // New Craigslist structure (2024+) - PRIORITY
       'div.result-data', // Explicit div selector for result-data
-      '.cl-search-result', // Alternative new format
+      '.cl-search-result', // Alternative new format (includes gallery view)
+      'div.cl-search-result.cl-search-view-mode-gallery', // Explicit gallery view results
       'li.result-row', // Traditional format (legacy)
       'li.cl-static-search-result', // Another format (legacy)
       'div.result-info', // Result info containers (legacy)
@@ -1374,13 +1464,17 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
           details.title = element.textContent.trim();
         }
 
-        // Extract price
-        const priceSelectors = ['.result-price', '.price', '.priceinfo', '[class*="price"]'];
+        // Extract price - prioritize .priceinfo for gallery view
+        const priceSelectors = isGalleryView
+          ? ['.priceinfo', '.result-price', '.price', '[class*="price"]']
+          : ['.result-price', '.price', '.priceinfo', '[class*="price"]'];
+
         for (const selector of priceSelectors) {
           const priceElement =
             element.querySelector(selector) || (element.matches(selector) ? element : null);
           if (priceElement) {
             details.price = priceElement.textContent.trim();
+            logger.debug(`Found price "${details.price}" using selector "${selector}"`);
             break;
           }
         }
@@ -2525,45 +2619,58 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
         })
         .filter(item => item !== null);
 
-      // If fetchDetails is true, fetch detailed attributes for each result
-      if (fetchDetails) {
-        logger.info(`Fetching detailed attributes for ${results.length} results`);
+      // If fetchDetails is true, fetch detailed attributes for each result in parallel
+      if (fetchDetails && results.length > 0) {
+        logger.info(
+          `Fetching detailed attributes for ${results.length} results with max concurrency: ${PARALLEL_CONFIG.MAX_CONCURRENT_DETAILS}`
+        );
 
-        // Limit the number of concurrent requests to avoid rate limiting
-        const concurrentLimit = 5;
-        const detailedResults = [];
-
-        for (let i = 0; i < results.length; i += concurrentLimit) {
-          const batch = results.slice(i, i + concurrentLimit);
-          const detailPromises = batch.map(async result => {
-            try {
-              const details = await getPostingDetails(result.url);
-              if (details && details.attributes) {
-                // Merge the detailed attributes with the search result
-                return {
-                  ...result,
-                  attributes: {
-                    ...result.attributes,
-                    ...details.attributes,
-                  },
-                };
+        const detailProcessor = async result => {
+          try {
+            const details = await getPostingDetails(result.url);
+            if (details && details.attributes) {
+              // Extract the ID from the URL to ensure consistency
+              let extractedUrlId = result.id;
+              const urlIdMatch = result.url.match(/\/(\d+)\.html$/);
+              if (urlIdMatch && urlIdMatch[1]) {
+                extractedUrlId = urlIdMatch[1];
+                logger.debug(`Using ID from URL: ${extractedUrlId}`);
               }
-              return result;
-            } catch (error) {
-              logger.error(`Error fetching details for ${result.url}: ${error.message}`);
-              return result;
+
+              // Merge the detailed attributes with the search result
+              return {
+                ...result,
+                id: extractedUrlId,
+                attributes: {
+                  ...result.attributes,
+                  ...details.attributes,
+                },
+                // Include additional details from the posting page
+                description: details.description || result.description,
+                images: details.images || result.images,
+                galleryImages: details.galleryImages || [],
+                mapAddress: details.mapAddress || null,
+                location: {
+                  ...result.location,
+                  ...details.location,
+                },
+              };
             }
-          });
-
-          const batchResults = await Promise.all(detailPromises);
-          detailedResults.push(...batchResults);
-
-          // Add a small delay between batches to avoid rate limiting
-          if (i + concurrentLimit < results.length) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            return result;
+          } catch (error) {
+            logger.error(`Error fetching details for ${result.url}: ${error.message}`);
+            return result; // Return original result if detail fetch fails
           }
-        }
+        };
 
+        const detailedResults = await processInParallel(
+          results,
+          detailProcessor,
+          PARALLEL_CONFIG.MAX_CONCURRENT_DETAILS,
+          PARALLEL_CONFIG.BATCH_DELAY
+        );
+
+        logger.info(`Completed fetching details for ${detailedResults.length} results`);
         return detailedResults;
       }
 
@@ -2740,25 +2847,51 @@ function deduplicateByTitle(results) {
  * @param {Array<string>} cities - Array of city codes to search
  * @param {Object} options - Search options
  * @param {number} options.limit - Maximum number of cities to search (to avoid rate limiting)
+ * @param {number} options.maxConcurrentCities - Maximum concurrent city searches
+ * @param {number} options.maxConcurrentDetails - Maximum concurrent detail fetches
  * @returns {Promise<Array>} Combined search results
  */
 export async function search(cities, options) {
-  const { limit = 5, fetchDetails = false, ...searchOptions } = options;
+  const {
+    limit = cities.length,
+    fetchDetails = false,
+    maxConcurrentCities = PARALLEL_CONFIG.MAX_CONCURRENT_CITIES,
+    maxConcurrentDetails = PARALLEL_CONFIG.MAX_CONCURRENT_DETAILS,
+    ...searchOptions
+  } = options;
 
-  // Limit the number of cities to search at once to avoid rate limiting
+  // Limit the number of cities to search
   const citiesToSearch = cities.slice(0, limit);
 
-  logger.info(`Searching ${citiesToSearch.length} Craigslist cities: ${citiesToSearch.join(', ')}`);
+  logger.info(
+    `Searching ${citiesToSearch.length} Craigslist cities with max concurrency: ${maxConcurrentCities}`
+  );
+  logger.info(`Cities: ${citiesToSearch.join(', ')}`);
 
   try {
-    // Search each city in parallel
-    const searchPromises = citiesToSearch.map(city =>
-      searchCity(city, { ...searchOptions, fetchDetails })
+    // Search cities in parallel with configurable concurrency
+    const cityProcessor = async city => {
+      try {
+        logger.info(`Starting search for city: ${city}`);
+        const results = await searchCity(city, { ...searchOptions, fetchDetails: false }); // Don't fetch details in city search
+        logger.info(`Completed search for city: ${city} - found ${results.length} results`);
+        return results;
+      } catch (error) {
+        logger.error(`Error searching city ${city}: ${error.message}`);
+        return []; // Return empty array for failed cities
+      }
+    };
+
+    const cityResults = await processInParallel(
+      citiesToSearch,
+      cityProcessor,
+      maxConcurrentCities,
+      PARALLEL_CONFIG.BATCH_DELAY
     );
-    const results = await Promise.all(searchPromises);
 
     // Combine and flatten results
-    const flatResults = results.flat();
+    const flatResults = cityResults.flat();
+    logger.info(`Combined results from all cities: ${flatResults.length} total listings`);
 
     // Deduplicate results based on title similarity
     const deduplicatedResults = deduplicateByTitle(flatResults);
@@ -2766,54 +2899,58 @@ export async function search(cities, options) {
       `Deduplicated ${flatResults.length} results to ${deduplicatedResults.length} unique listings`
     );
 
-    // If fetchDetails is true, fetch detailed attributes for each result
-    if (fetchDetails) {
-      logger.info(`Fetching detailed attributes for ${deduplicatedResults.length} results`);
+    // If fetchDetails is true, fetch detailed attributes for each result in parallel
+    if (fetchDetails && deduplicatedResults.length > 0) {
+      logger.info(
+        `Fetching detailed attributes for ${deduplicatedResults.length} results with max concurrency: ${maxConcurrentDetails}`
+      );
 
-      // Limit the number of concurrent requests to avoid rate limiting
-      const concurrentLimit = 5;
-      const detailedResults = [];
-
-      for (let i = 0; i < deduplicatedResults.length; i += concurrentLimit) {
-        const batch = deduplicatedResults.slice(i, i + concurrentLimit);
-        const detailPromises = batch.map(async result => {
-          try {
-            const details = await getPostingDetails(result.url);
-            if (details && details.attributes) {
-              // Extract the ID from the URL to ensure consistency
-              let extractedUrlId = result.id;
-              const urlIdMatch = result.url.match(/\/(\d+)\.html$/);
-              if (urlIdMatch && urlIdMatch[1]) {
-                extractedUrlId = urlIdMatch[1];
-                logger.debug(`Using ID from URL: ${extractedUrlId}`);
-              }
-
-              // Merge the detailed attributes with the search result
-              return {
-                ...result,
-                id: extractedUrlId,
-                attributes: {
-                  ...result.attributes,
-                  ...details.attributes,
-                },
-              };
+      const detailProcessor = async result => {
+        try {
+          const details = await getPostingDetails(result.url);
+          if (details && details.attributes) {
+            // Extract the ID from the URL to ensure consistency
+            let extractedUrlId = result.id;
+            const urlIdMatch = result.url.match(/\/(\d+)\.html$/);
+            if (urlIdMatch && urlIdMatch[1]) {
+              extractedUrlId = urlIdMatch[1];
+              logger.debug(`Using ID from URL: ${extractedUrlId}`);
             }
-            return result;
-          } catch (error) {
-            logger.error(`Error fetching details for ${result.url}: ${error.message}`);
-            return result;
+
+            // Merge the detailed attributes with the search result
+            return {
+              ...result,
+              id: extractedUrlId,
+              attributes: {
+                ...result.attributes,
+                ...details.attributes,
+              },
+              // Include additional details from the posting page
+              description: details.description || result.description,
+              images: details.images || result.images,
+              galleryImages: details.galleryImages || [],
+              mapAddress: details.mapAddress || null,
+              location: {
+                ...result.location,
+                ...details.location,
+              },
+            };
           }
-        });
-
-        const batchResults = await Promise.all(detailPromises);
-        detailedResults.push(...batchResults);
-
-        // Add a small delay between batches to avoid rate limiting
-        if (i + concurrentLimit < deduplicatedResults.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          return result;
+        } catch (error) {
+          logger.error(`Error fetching details for ${result.url}: ${error.message}`);
+          return result; // Return original result if detail fetch fails
         }
-      }
+      };
 
+      const detailedResults = await processInParallel(
+        deduplicatedResults,
+        detailProcessor,
+        maxConcurrentDetails,
+        PARALLEL_CONFIG.BATCH_DELAY
+      );
+
+      logger.info(`Completed fetching details for ${detailedResults.length} results`);
       return detailedResults;
     }
 
@@ -2892,7 +3029,24 @@ function parsePostingDetails(html, url) {
 
     // Get basic posting info
     const title = document.querySelector('#titletextonly')?.textContent.trim() || null;
-    const price = document.querySelector('.price')?.textContent.trim() || null;
+
+    // Enhanced price parsing for posting pages - try multiple selectors
+    const priceSelectors = [
+      'span.price', // Standard price selector: <span class="price">$25</span>
+      '.price', // Generic price class
+      '.postingtitle .price', // Price in posting title
+      '[class*="price"]', // Any element with "price" in class name
+    ];
+
+    let price = null;
+    for (const selector of priceSelectors) {
+      const priceElement = document.querySelector(selector);
+      if (priceElement) {
+        price = priceElement.textContent.trim();
+        console.log(`Found price "${price}" using selector "${selector}"`);
+        break;
+      }
+    }
 
     // Log the URL for debugging
     logger.debug(`Parsing posting details for URL: ${url}`);
@@ -2917,6 +3071,74 @@ function parsePostingDetails(html, url) {
       // Get the cleaned text
       postingBody = cleanedElement.textContent.trim();
     }
+
+    // Parse map address
+    let mapAddress = null;
+    const mapAddressElement = document.querySelector('.mapaddress');
+    if (mapAddressElement) {
+      mapAddress = mapAddressElement.textContent.trim();
+      logger.debug(`Found map address: ${mapAddress}`);
+    }
+
+    // Parse gallery images from the new structure
+    let galleryImages = [];
+    const galleryElement = document.querySelector('.gallery');
+    if (galleryElement) {
+      // Look for images in the swipe gallery
+      const slideImages = galleryElement.querySelectorAll('.slide img, .swipe img');
+      slideImages.forEach(img => {
+        const src = img.getAttribute('src');
+        if (
+          src &&
+          !src.includes('no_image.png') &&
+          !src.includes('icon') &&
+          !src.includes('logo')
+        ) {
+          // Convert to full size if it's a thumbnail
+          let fullSizeSrc = src;
+          if (src.includes('_1200x900')) {
+            fullSizeSrc = src; // Already full size
+          } else if (src.includes('_600x450')) {
+            fullSizeSrc = src.replace('_600x450', '_1200x900');
+          } else if (src.includes('_300x300')) {
+            fullSizeSrc = src.replace('_300x300', '_1200x900');
+          }
+          galleryImages.push(fullSizeSrc);
+        }
+      });
+      logger.debug(`Found ${galleryImages.length} gallery images`);
+    }
+
+    // Parse attributes from .attrgroup sections
+    let parsedAttributes = {};
+    const attributeGroups = document.querySelectorAll('.attrgroup');
+    attributeGroups.forEach((group, groupIndex) => {
+      logger.debug(`Processing attribute group ${groupIndex + 1}`);
+
+      // Look for .attr elements within the group
+      const attrElements = group.querySelectorAll('.attr');
+      attrElements.forEach(attr => {
+        // Get the attribute name from the class or data attribute
+        const attrClasses = Array.from(attr.classList);
+        const attrClass = attrClasses.find(cls => cls.startsWith('attr_') || cls !== 'attr');
+
+        if (attrClass && attrClass !== 'attr') {
+          const attrName = attrClass.replace('attr_', '').replace(/_/g, ' ');
+
+          // Get the value from the .valu span or link
+          const valuElement = attr.querySelector('.valu');
+          if (valuElement) {
+            const link = valuElement.querySelector('a');
+            const value = link ? link.textContent.trim() : valuElement.textContent.trim();
+
+            if (value) {
+              parsedAttributes[attrName] = value;
+              logger.debug(`Found attribute: ${attrName} = ${value}`);
+            }
+          }
+        }
+      });
+    });
 
     const postingDate =
       document.querySelector('.date.timeago')?.textContent.trim() ||
@@ -3564,15 +3786,18 @@ function parsePostingDetails(html, url) {
       price,
       description: postingBody,
       postingDate,
-      images,
-      attributes: cleanedAttributes,
-      specs: cleanedAttributes, // Alias for attributes for clarity
+      images: galleryImages.length > 0 ? galleryImages : images, // Prefer gallery images if available
+      attributes: { ...cleanedAttributes, ...parsedAttributes }, // Merge both attribute sets
+      specs: { ...cleanedAttributes, ...parsedAttributes }, // Alias for attributes for clarity
       location: {
-        name: locationName,
+        name: locationName || mapAddress, // Use map address if no location name
         latitude,
         longitude,
+        address: mapAddress, // Include the specific address
       },
       url,
+      galleryImages, // Include gallery images separately
+      mapAddress, // Include map address separately
     };
   } catch (error) {
     logger.error(`Error parsing posting details: ${error.message}`);
