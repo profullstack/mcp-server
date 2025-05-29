@@ -67,6 +67,10 @@ async function getBrowser() {
       const chromiumPath = '/usr/bin/chromium';
       const chromePath = process.env.CHROME_PATH;
 
+      logger.info(
+        `Attempting to launch browser with paths: chromium=${chromiumPath}, chrome=${chromePath}`
+      );
+
       // Enable proxy if needed
       const useProxy = true; // Set to true to enable proxy
 
@@ -119,12 +123,37 @@ async function getBrowser() {
         logger.info('Running without proxy');
       }
 
+      // Try to find an available browser executable
+      const possibleBrowserPaths = [
+        chromePath, // Environment variable
+        '/snap/bin/chromium', // Snap-installed Chromium (often more reliable)
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/google-chrome',
+      ].filter(Boolean);
+
+      let executablePath = null;
+      for (const path of possibleBrowserPaths) {
+        try {
+          const fs = await import('fs');
+          await fs.promises.access(path);
+          executablePath = path;
+          logger.info(`Found browser at: ${path}`);
+          break;
+        } catch (error) {
+          logger.debug(`Browser not found at: ${path}`);
+        }
+      }
+
+      if (!executablePath) {
+        throw new Error('No Chrome/Chromium browser found. Please install Chrome or Chromium.');
+      }
+
       browser = await puppeteer.launch({
         headless: true, // Use true instead of 'new' for better compatibility
         args: args,
-        // Force use of Chromium browser
-        executablePath: chromiumPath || chromePath || undefined,
-        product: 'chrome', // Force Puppeteer to use Chromium/Chrome
+        executablePath: executablePath,
         ignoreDefaultArgs: ['--disable-extensions'],
         ignoreHTTPSErrors: true,
         defaultViewport: {
@@ -327,17 +356,36 @@ async function fetchWithPuppeteer(url, options = {}) {
     logger.info(`HTML content preview (first 1000 chars): ${content.substring(0, 1000)}`);
 
     // Also dump to a file for easier inspection
-    const fs = await import('fs');
-    const path = await import('path');
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const debugFileName = `debug-html-${timestamp}.html`;
-    const debugFilePath = path.join(process.cwd(), 'debug', debugFileName);
-
     try {
-      // Create debug directory if it doesn't exist
-      await fs.promises.mkdir(path.dirname(debugFilePath), { recursive: true });
-      await fs.promises.writeFile(debugFilePath, content, 'utf8');
-      logger.info(`HTML content dumped to: ${debugFilePath}`);
+      const fs = await import('fs');
+      const path = await import('path');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const debugFileName = `debug-html-${timestamp}.html`;
+
+      // Try multiple possible debug directories
+      const possiblePaths = [
+        path.join(process.cwd(), 'debug', debugFileName),
+        path.join('/tmp', debugFileName),
+        path.join('.', debugFileName),
+      ];
+
+      let debugFilePath = null;
+      for (const testPath of possiblePaths) {
+        try {
+          await fs.promises.mkdir(path.dirname(testPath), { recursive: true });
+          debugFilePath = testPath;
+          break;
+        } catch (dirError) {
+          logger.debug(`Cannot create directory for ${testPath}: ${dirError.message}`);
+        }
+      }
+
+      if (debugFilePath) {
+        await fs.promises.writeFile(debugFilePath, content, 'utf8');
+        logger.info(`HTML content dumped to: ${debugFilePath}`);
+      } else {
+        logger.error('Could not find a writable directory for debug files');
+      }
     } catch (writeError) {
       logger.error(`Failed to write debug HTML file: ${writeError.message}`);
     }
@@ -716,7 +764,7 @@ export async function searchCity(city, options) {
     });
 
     const searchUrl = `${url}?${params.toString()}`;
-    logger.debug(`Searching Craigslist: ${searchUrl}`);
+    logger.info(`Searching Craigslist: ${searchUrl}`);
 
     // Fetch the search results with Puppeteer first
     logger.info(`Searching Craigslist with Puppeteer: ${searchUrl}`);
@@ -724,8 +772,14 @@ export async function searchCity(city, options) {
     let response;
     let html;
 
-    // Use Puppeteer to fetch search results - will throw if Chrome is not available
-    response = await fetchWithPuppeteer(searchUrl);
+    try {
+      // Use Puppeteer to fetch search results - will throw if Chrome is not available
+      response = await fetchWithPuppeteer(searchUrl);
+      logger.info(`Puppeteer fetch completed for: ${searchUrl}`);
+    } catch (puppeteerError) {
+      logger.error(`Puppeteer fetch failed for ${searchUrl}: ${puppeteerError.message}`);
+      throw puppeteerError;
+    }
 
     if (response.ok) {
       html = await response.text();
@@ -735,17 +789,36 @@ export async function searchCity(city, options) {
       logger.info(`Search results HTML preview (first 1000 chars): ${html.substring(0, 1000)}`);
 
       // Also dump search results to a file for easier inspection
-      const fs = await import('fs');
-      const path = await import('path');
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const debugFileName = `debug-search-${city}-${category}-${timestamp}.html`;
-      const debugFilePath = path.join(process.cwd(), 'debug', debugFileName);
-
       try {
-        // Create debug directory if it doesn't exist
-        await fs.promises.mkdir(path.dirname(debugFilePath), { recursive: true });
-        await fs.promises.writeFile(debugFilePath, html, 'utf8');
-        logger.info(`Search results HTML dumped to: ${debugFilePath}`);
+        const fs = await import('fs');
+        const path = await import('path');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const debugFileName = `debug-search-${city}-${category}-${timestamp}.html`;
+
+        // Try multiple possible debug directories
+        const possiblePaths = [
+          path.join(process.cwd(), 'debug', debugFileName),
+          path.join('/tmp', debugFileName),
+          path.join('.', debugFileName),
+        ];
+
+        let debugFilePath = null;
+        for (const testPath of possiblePaths) {
+          try {
+            await fs.promises.mkdir(path.dirname(testPath), { recursive: true });
+            debugFilePath = testPath;
+            break;
+          } catch (dirError) {
+            logger.debug(`Cannot create directory for ${testPath}: ${dirError.message}`);
+          }
+        }
+
+        if (debugFilePath) {
+          await fs.promises.writeFile(debugFilePath, html, 'utf8');
+          logger.info(`Search results HTML dumped to: ${debugFilePath}`);
+        } else {
+          logger.error('Could not find a writable directory for debug files');
+        }
       } catch (writeError) {
         logger.error(`Failed to write debug search HTML file: ${writeError.message}`);
       }
