@@ -122,8 +122,9 @@ async function getBrowser() {
       browser = await puppeteer.launch({
         headless: true, // Use true instead of 'new' for better compatibility
         args: args,
-        // Try to use Chromium first, then fall back to Chrome if available
+        // Force use of Chromium browser
         executablePath: chromiumPath || chromePath || undefined,
+        product: 'chrome', // Force Puppeteer to use Chromium/Chrome
         ignoreDefaultArgs: ['--disable-extensions'],
         ignoreHTTPSErrors: true,
         defaultViewport: {
