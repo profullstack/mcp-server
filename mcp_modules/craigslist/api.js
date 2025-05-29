@@ -290,8 +290,18 @@ async function fetchWithPuppeteer(url, options = {}) {
     // Wait for content to load with more patience
     await page.waitForSelector('body', { timeout: 10000 }).catch(() => {});
 
-    // Add a small delay to let any JavaScript execute
-    await delay(2000);
+    // Wait for AJAX content to load - try to wait for result-data elements
+    try {
+      await page.waitForSelector('.result-data, .cl-search-result, .result-row', {
+        timeout: 10000,
+      });
+      logger.info('Found search result elements after AJAX load');
+    } catch (waitError) {
+      logger.warn('No search result elements found after waiting for AJAX');
+    }
+
+    // Add a longer delay to let any JavaScript execute and AJAX load
+    await delay(5000);
 
     // Scroll down to load any lazy-loaded content
     await page.evaluate(() => {
@@ -299,10 +309,38 @@ async function fetchWithPuppeteer(url, options = {}) {
     });
 
     // Wait a bit more for any lazy-loaded content
-    await delay(1000);
+    await delay(2000);
+
+    // Scroll down more to trigger any additional lazy loading
+    await page.evaluate(() => {
+      window.scrollBy(0, 1000);
+    });
+
+    // Final wait for any additional AJAX content
+    await delay(3000);
 
     // Get the HTML content
     const content = await page.content();
+
+    // Debug: Dump the HTML content to see what we're getting
+    logger.info(`HTML content length: ${content.length} characters`);
+    logger.info(`HTML content preview (first 1000 chars): ${content.substring(0, 1000)}`);
+
+    // Also dump to a file for easier inspection
+    const fs = await import('fs');
+    const path = await import('path');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const debugFileName = `debug-html-${timestamp}.html`;
+    const debugFilePath = path.join(process.cwd(), 'debug', debugFileName);
+
+    try {
+      // Create debug directory if it doesn't exist
+      await fs.promises.mkdir(path.dirname(debugFilePath), { recursive: true });
+      await fs.promises.writeFile(debugFilePath, content, 'utf8');
+      logger.info(`HTML content dumped to: ${debugFilePath}`);
+    } catch (writeError) {
+      logger.error(`Failed to write debug HTML file: ${writeError.message}`);
+    }
 
     // Close the page
     await page.close();
@@ -692,6 +730,26 @@ export async function searchCity(city, options) {
     if (response.ok) {
       html = await response.text();
 
+      // Debug: Dump the search results HTML
+      logger.info(`Search results HTML length: ${html.length} characters`);
+      logger.info(`Search results HTML preview (first 1000 chars): ${html.substring(0, 1000)}`);
+
+      // Also dump search results to a file for easier inspection
+      const fs = await import('fs');
+      const path = await import('path');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const debugFileName = `debug-search-${city}-${category}-${timestamp}.html`;
+      const debugFilePath = path.join(process.cwd(), 'debug', debugFileName);
+
+      try {
+        // Create debug directory if it doesn't exist
+        await fs.promises.mkdir(path.dirname(debugFilePath), { recursive: true });
+        await fs.promises.writeFile(debugFilePath, html, 'utf8');
+        logger.info(`Search results HTML dumped to: ${debugFilePath}`);
+      } catch (writeError) {
+        logger.error(`Failed to write debug search HTML file: ${writeError.message}`);
+      }
+
       // Check if the HTML contains actual search results - be more lenient
       if (
         html.includes('result-row') ||
@@ -741,9 +799,15 @@ export async function searchCity(city, options) {
       const html = await response.text();
       const results = await parseSearchResults(html, city, category, query, fetchDetails);
 
-      // If we got results, return them
+      // If we got results, deduplicate and return them
       if (results.length > 0) {
-        return results;
+        const deduplicatedResults = deduplicateByTitle(results);
+        if (deduplicatedResults.length !== results.length) {
+          logger.info(
+            `Deduplicated ${results.length} results to ${deduplicatedResults.length} unique listings for city ${city}`
+          );
+        }
+        return deduplicatedResults;
       }
     }
 
@@ -968,6 +1032,46 @@ export async function searchCity(city, options) {
 async function parseSearchResults(html, city, category, query, fetchDetails = false) {
   // Log the first 500 characters of the HTML for debugging
   logger.debug(`Parsing search results HTML (first 500 chars): ${html.substring(0, 500)}...`);
+
+  // Additional debugging: log key indicators (updated for new Craigslist structure)
+  const indicators = [
+    'result-data',
+    'cl-app-anchor',
+    'cl-search-anchor',
+    'label',
+    'meta', // New structure
+    'result-row',
+    'gallery-card',
+    'cl-search-result',
+    'result-info',
+    'result-title', // Legacy
+    'result-image',
+    'result-meta',
+    'result-price',
+    'result-date',
+    'result-hood', // Legacy
+    'search-results',
+    'search-result',
+    'searchresult',
+    'rows',
+    'row',
+    'posting',
+    'postings',
+    'gallery',
+    'card',
+    'title',
+    'price',
+    'date',
+    'location',
+    'href="/',
+    'href="https://',
+    '.html"',
+    '/d/',
+  ];
+
+  const foundIndicators = indicators.filter(indicator => html.includes(indicator));
+  logger.info(`Found ${foundIndicators.length} indicators in HTML: ${foundIndicators.join(', ')}`);
+
   try {
     const dom = new JSDOM(html);
     const document = dom.window.document;
@@ -1002,13 +1106,16 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
       mainContainer = document.body; // Fallback to body
     }
 
-    // Look for listing elements within the main container - prioritize actual post links
+    // Look for listing elements within the main container - prioritize new Craigslist structure
     const listingSelectors = [
-      'li.result-row', // Traditional format
-      'li.cl-static-search-result', // Another format
-      'div.result-info', // Result info containers
-      'div.gallery-card', // Gallery cards
-      'div.result', // Generic results
+      '.result-data', // New Craigslist structure (2024+) - PRIORITY
+      'div.result-data', // Explicit div selector for result-data
+      '.cl-search-result', // Alternative new format
+      'li.result-row', // Traditional format (legacy)
+      'li.cl-static-search-result', // Another format (legacy)
+      'div.result-info', // Result info containers (legacy)
+      'div.gallery-card', // Gallery cards (legacy)
+      'div.result', // Generic results (legacy)
       'a[href*="/d/"][href*=".html"]', // Direct links to listings (must have both /d/ and .html)
       'a[href*="/bik/d/"][href*=".html"]', // Links to bike listings with proper format
       'a[href*="/bia/d/"][href*=".html"]', // Links to bike accessories with proper format
@@ -1030,8 +1137,19 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
       const elements = mainContainer.querySelectorAll(selector);
       if (elements.length > 0) {
         listingElements = Array.from(elements);
-        logger.debug(`Found ${elements.length} listing elements using selector: ${selector}`);
+        logger.info(`Found ${elements.length} listing elements using selector: ${selector}`);
+
+        // Debug: Show sample of what we found
+        if (elements.length > 0) {
+          const sampleElement = elements[0];
+          logger.info(`Sample element HTML: ${sampleElement.outerHTML.substring(0, 200)}...`);
+          logger.info(
+            `Sample element text content: ${sampleElement.textContent.substring(0, 100)}...`
+          );
+        }
         break;
+      } else {
+        logger.debug(`No elements found for selector: ${selector}`);
       }
     }
 
@@ -1058,11 +1176,13 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
           postId: '',
         };
 
-        // Extract URL - either from the element itself if it's a link, or from a child link
+        // Extract URL - prioritize new Craigslist structure, then fallback to legacy
         let linkElement =
           element.tagName === 'A'
             ? element
-            : element.querySelector('a[href*=".html"], a[href*="/d/"]');
+            : element.querySelector(
+                '.cl-app-anchor, .cl-search-anchor, a[href*=".html"], a[href*="/d/"]'
+              );
         if (linkElement) {
           const href = linkElement.getAttribute('href');
           if (href) {
@@ -1147,14 +1267,32 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
           }
         }
 
-        // Extract title
-        const titleSelectors = ['.result-title', '.titlestring', '.posting-title', 'h3', '.title'];
+        // Extract title - updated for new Craigslist structure
+        const titleSelectors = [
+          '.label', // New Craigslist structure - title is in .label span
+          '.cl-app-anchor .label', // More specific selector for new structure
+          '.posting-title .label', // Alternative new structure
+          '.result-title', // Traditional format (legacy)
+          '.titlestring', // Legacy
+          '.posting-title', // Legacy
+          'h3', // Generic heading
+          '.title', // Generic title
+        ];
+
         for (const selector of titleSelectors) {
           const titleElement =
             element.querySelector(selector) || (element.matches(selector) ? element : null);
           if (titleElement) {
             details.title = titleElement.textContent.trim();
             break;
+          }
+        }
+
+        // If we still don't have a title, try to get it from .cl-app-anchor link text
+        if (!details.title) {
+          const linkElement = element.querySelector('.cl-app-anchor, .cl-search-anchor');
+          if (linkElement) {
+            details.title = linkElement.textContent.trim();
           }
         }
 
@@ -1174,14 +1312,47 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
           }
         }
 
-        // Extract location
-        const locationSelectors = ['.result-hood', '.location', '.geo', '[class*="location"]'];
+        // Extract location - updated for new Craigslist structure
+        const locationSelectors = [
+          '.meta', // New structure - location is in meta section (need to parse text)
+          '.result-hood', // Legacy
+          '.location', // Legacy
+          '.geo', // Legacy
+          '[class*="location"]', // Legacy
+        ];
+
         for (const selector of locationSelectors) {
           const locationElement =
             element.querySelector(selector) || (element.matches(selector) ? element : null);
           if (locationElement) {
-            details.location = locationElement.textContent.trim().replace(/[()]/g, '');
-            break;
+            let locationText = locationElement.textContent.trim();
+
+            // For new structure, location is mixed with other meta info, extract it
+            if (selector === '.meta') {
+              // Location is typically the first text segment before separators
+              const parts = locationText.split(/\s*\u2022\s*|\s*·\s*|\s*\|\s*/); // Split on bullet, middle dot, or pipe
+              if (parts.length > 0) {
+                // Skip empty parts and find the location (usually not a date or "pic" button)
+                for (const part of parts) {
+                  const cleanPart = part.trim();
+                  if (
+                    cleanPart &&
+                    !cleanPart.match(/^\d+\/\d+$/) && // Not a date like "6/8"
+                    !cleanPart.match(/^posted \d+\/\d+$/) && // Not "posted 5/11"
+                    !cleanPart.includes('pic') && // Not "pic" button
+                    !cleanPart.includes('hide') && // Not "hide" button
+                    cleanPart.length > 2
+                  ) {
+                    details.location = cleanPart.replace(/[()]/g, '');
+                    break;
+                  }
+                }
+              }
+            } else {
+              details.location = locationText.replace(/[()]/g, '');
+            }
+
+            if (details.location) break;
           }
         }
 
@@ -2446,6 +2617,51 @@ function extractImageId(imageUrl) {
 }
 
 /**
+ * Deduplicate search results based on title similarity
+ * @param {Array} results - Array of search results
+ * @returns {Array} Deduplicated results
+ */
+function deduplicateByTitle(results) {
+  if (!results || results.length === 0) return results;
+
+  const uniqueResults = [];
+  const seenTitles = new Set();
+
+  for (const result of results) {
+    if (!result.title) {
+      uniqueResults.push(result);
+      continue;
+    }
+
+    // Normalize title for comparison
+    const normalizedTitle = result.title
+      .toLowerCase()
+      .replace(/[^\w\s]/g, '') // Remove punctuation
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+
+    // Check if we've seen a very similar title
+    let isDuplicate = false;
+    for (const seenTitle of seenTitles) {
+      const similarity = calculateSimilarity(normalizedTitle, seenTitle);
+      if (similarity > 0.85) {
+        // 85% similarity threshold
+        isDuplicate = true;
+        logger.debug(`Filtering duplicate title: "${result.title}" (similar to existing)`);
+        break;
+      }
+    }
+
+    if (!isDuplicate) {
+      seenTitles.add(normalizedTitle);
+      uniqueResults.push(result);
+    }
+  }
+
+  return uniqueResults;
+}
+
+/**
  * Search across multiple Craigslist cities
  *
  * @param {Array<string>} cities - Array of city codes to search
@@ -2471,16 +2687,22 @@ export async function search(cities, options) {
     // Combine and flatten results
     const flatResults = results.flat();
 
+    // Deduplicate results based on title similarity
+    const deduplicatedResults = deduplicateByTitle(flatResults);
+    logger.info(
+      `Deduplicated ${flatResults.length} results to ${deduplicatedResults.length} unique listings`
+    );
+
     // If fetchDetails is true, fetch detailed attributes for each result
     if (fetchDetails) {
-      logger.info(`Fetching detailed attributes for ${flatResults.length} results`);
+      logger.info(`Fetching detailed attributes for ${deduplicatedResults.length} results`);
 
       // Limit the number of concurrent requests to avoid rate limiting
       const concurrentLimit = 5;
       const detailedResults = [];
 
-      for (let i = 0; i < flatResults.length; i += concurrentLimit) {
-        const batch = flatResults.slice(i, i + concurrentLimit);
+      for (let i = 0; i < deduplicatedResults.length; i += concurrentLimit) {
+        const batch = deduplicatedResults.slice(i, i + concurrentLimit);
         const detailPromises = batch.map(async result => {
           try {
             const details = await getPostingDetails(result.url);
@@ -2514,7 +2736,7 @@ export async function search(cities, options) {
         detailedResults.push(...batchResults);
 
         // Add a small delay between batches to avoid rate limiting
-        if (i + concurrentLimit < flatResults.length) {
+        if (i + concurrentLimit < deduplicatedResults.length) {
           await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
@@ -2522,7 +2744,7 @@ export async function search(cities, options) {
       return detailedResults;
     }
 
-    return flatResults;
+    return deduplicatedResults;
   } catch (error) {
     logger.error(`Error searching multiple cities: ${error.message}`);
     return [];
