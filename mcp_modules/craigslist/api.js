@@ -117,6 +117,115 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Implement infinite scroll pagination for Craigslist search results
+ * @param {Page} page - Puppeteer page instance
+ */
+async function implementInfiniteScroll(page) {
+  let previousResultCount = 0;
+  let currentResultCount = 0;
+  let noNewResultsCount = 0;
+  const maxScrollAttempts = 20; // Maximum number of scroll attempts
+  const maxNoNewResultsAttempts = 3; // Stop after 3 attempts with no new results
+
+  logger.info('Starting infinite scroll pagination');
+
+  for (let scrollAttempt = 0; scrollAttempt < maxScrollAttempts; scrollAttempt++) {
+    // Count current results
+    try {
+      currentResultCount = await page.evaluate(() => {
+        /* eslint-disable no-undef */
+        const selectors = [
+          '.result-data',
+          '.cl-search-result',
+          '.result-row',
+          'a[href*="/d/"][href*=".html"]',
+        ];
+
+        let totalResults = 0;
+        for (const selector of selectors) {
+          const elements = document.querySelectorAll(selector);
+          if (elements.length > 0) {
+            totalResults = elements.length;
+            break;
+          }
+        }
+        return totalResults;
+      });
+
+      logger.info(
+        `Scroll attempt ${scrollAttempt + 1}: Found ${currentResultCount} results (previous: ${previousResultCount})`
+      );
+
+      // Check if we got new results
+      if (currentResultCount > previousResultCount) {
+        noNewResultsCount = 0; // Reset counter
+        previousResultCount = currentResultCount;
+      } else {
+        noNewResultsCount++;
+        logger.info(
+          `No new results found (attempt ${noNewResultsCount}/${maxNoNewResultsAttempts})`
+        );
+
+        if (noNewResultsCount >= maxNoNewResultsAttempts) {
+          logger.info('No new results after multiple attempts, stopping pagination');
+          break;
+        }
+      }
+
+      // Scroll to bottom of page
+      await page.evaluate(() => {
+        /* eslint-disable no-undef */
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+
+      // Wait for images to load
+      logger.debug('Waiting for images to load...');
+      await delay(2000);
+
+      // Wait for any lazy-loaded content
+      try {
+        await page.waitForFunction(
+          () => {
+            /* eslint-disable no-undef */
+            const images = document.querySelectorAll('img');
+            return Array.from(images).every(img => img.complete || img.naturalHeight > 0);
+          },
+          { timeout: 5000 }
+        );
+        logger.debug('Images loaded successfully');
+      } catch (imageWaitError) {
+        logger.debug('Timeout waiting for images, continuing...');
+      }
+
+      // Additional scroll to trigger more content loading
+      await page.evaluate(() => {
+        window.scrollBy(0, 500);
+      });
+
+      // Wait for potential AJAX requests
+      await delay(3000);
+
+      // Check if we've reached the end of the page
+      const isAtBottom = await page.evaluate(() => {
+        /* eslint-disable no-undef */
+        return window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
+      });
+
+      if (isAtBottom && noNewResultsCount > 0) {
+        logger.info('Reached bottom of page with no new results, stopping pagination');
+        break;
+      }
+    } catch (error) {
+      logger.error(`Error during scroll attempt ${scrollAttempt + 1}: ${error.message}`);
+      break;
+    }
+  }
+
+  logger.info(`Infinite scroll completed. Final result count: ${currentResultCount}`);
+  return currentResultCount;
+}
+
 // Simple in-memory cache for responses
 const responseCache = new Map();
 const CACHE_TTL = 3600000; // 1 hour in milliseconds
@@ -410,24 +519,31 @@ async function fetchWithPuppeteer(url, options = {}) {
       logger.warn('No search result elements found after waiting for AJAX');
     }
 
-    // Add a longer delay to let any JavaScript execute and AJAX load
-    await delay(5000);
+    // Implement infinite scroll pagination for search results pages
+    if (url.includes('/search/')) {
+      logger.info('Implementing infinite scroll pagination for search results');
+      await implementInfiniteScroll(page);
+    } else {
+      // For individual posting pages, just do basic scrolling
+      // Add a longer delay to let any JavaScript execute and AJAX load
+      await delay(5000);
 
-    // Scroll down to load any lazy-loaded content
-    await page.evaluate(() => {
-      window.scrollBy(0, 500);
-    });
+      // Scroll down to load any lazy-loaded content
+      await page.evaluate(() => {
+        window.scrollBy(0, 500);
+      });
 
-    // Wait a bit more for any lazy-loaded content
-    await delay(2000);
+      // Wait a bit more for any lazy-loaded content
+      await delay(2000);
 
-    // Scroll down more to trigger any additional lazy loading
-    await page.evaluate(() => {
-      window.scrollBy(0, 1000);
-    });
+      // Scroll down more to trigger any additional lazy loading
+      await page.evaluate(() => {
+        window.scrollBy(0, 1000);
+      });
 
-    // Final wait for any additional AJAX content
-    await delay(3000);
+      // Final wait for any additional AJAX content
+      await delay(3000);
+    }
 
     // Get the HTML content
     const content = await page.content();
@@ -1359,33 +1475,39 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
             }
 
             // Try to extract post ID from URL - multiple patterns
-            // Pattern 1: /7849519172.html (direct ID at end)
-            let postIdMatch = details.url.match(/\/(\d+)\.html$/);
+            // Pattern 1: /d/title/7849519172.html (ID before .html) - MOST COMMON
+            let postIdMatch = details.url.match(/\/d\/[^/]+\/(\d{7,})\.html/);
             if (postIdMatch && postIdMatch[1]) {
               details.postId = postIdMatch[1];
-              logger.debug(`Extracted post ID from URL (pattern 1): ${details.postId}`);
+              logger.debug(
+                `Extracted post ID from URL (pattern 1 - /d/title/ID.html): ${details.postId}`
+              );
             }
-            // Pattern 2: /d/title/7849519172.html (ID before .html)
-            else if (details.url.includes('/d/')) {
-              postIdMatch = details.url.match(/\/d\/[^/]+\/(\d+)\.html/);
+            // Pattern 2: /7849519172.html (direct ID at end)
+            else {
+              postIdMatch = details.url.match(/\/(\d{7,})\.html$/);
               if (postIdMatch && postIdMatch[1]) {
                 details.postId = postIdMatch[1];
-                logger.debug(`Extracted post ID from URL (pattern 2): ${details.postId}`);
+                logger.debug(
+                  `Extracted post ID from URL (pattern 2 - /ID.html): ${details.postId}`
+                );
               }
             }
             // Pattern 3: Any numeric ID in the URL that's 7+ digits (likely a post ID)
-            else if (details.url.match(/\/\d{7,}/)) {
-              postIdMatch = details.url.match(/\/(\d{7,})(?:\/|$)/);
+            if (!details.postId && details.url.match(/\/\d{7,}/)) {
+              postIdMatch = details.url.match(/\/(\d{7,})(?:\/|\.html|$)/);
               if (postIdMatch && postIdMatch[1]) {
                 details.postId = postIdMatch[1];
-                logger.debug(`Extracted post ID from URL (pattern 3): ${details.postId}`);
+                logger.debug(
+                  `Extracted post ID from URL (pattern 3 - any 7+ digit number): ${details.postId}`
+                );
               }
             }
 
             // If we still don't have a post ID, try to find it in the data attributes
             if (!details.postId) {
               const dataId = linkElement.getAttribute('data-id');
-              if (dataId && /^\d+$/.test(dataId)) {
+              if (dataId && /^\d{7,}$/.test(dataId)) {
                 details.postId = dataId;
                 logger.debug(`Extracted post ID from data-id attribute: ${details.postId}`);
               }
@@ -1420,7 +1542,7 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
             if (!details.postId && linkElement.parentElement) {
               const parentHTML = linkElement.parentElement.innerHTML;
               const match = parentHTML.match(
-                /data-pid="(\d+)"|data-id="(\d+)"|id="(\d+)"|postingid="(\d+)"/
+                /data-pid="(\d{7,})"|data-id="(\d{7,})"|id="(\d{7,})"|postingid="(\d{7,})"/
               );
               if (match) {
                 details.postId = match[1] || match[2] || match[3] || match[4];
@@ -1691,7 +1813,7 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
       });
 
       // Create results from the filtered listing details
-      const results = validListings.map((listing, index) => {
+      const results = validListings.map(listing => {
         // Process image URL to ensure it's a full URL
         let imageUrl = listing.imageUrl || null;
         let images = [];
@@ -1716,13 +1838,18 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
         const directUrl = listing.url || '';
         let finalUrl = '';
 
-        // If the URL already has the correct format, use it
-        if (directUrl && directUrl.includes('/d/') && directUrl.includes('.html')) {
+        // If the URL already has the correct format and is a full URL, use it
+        if (
+          directUrl &&
+          directUrl.startsWith('https://') &&
+          directUrl.includes('/d/') &&
+          directUrl.includes('.html')
+        ) {
           finalUrl = directUrl;
           logger.debug(`Using existing direct URL: ${finalUrl}`);
         }
         // If we have a post ID, construct a proper direct URL with descriptive slug
-        else if (listing.postId && listing.postId !== '0') {
+        else if (listing.postId && listing.postId !== '0' && listing.postId.length >= 7) {
           // Create a slug from the title
           const slug = listing.title ? createSlugFromTitle(listing.title) : 'craigslist-posting';
           // Use the subcity code if available, otherwise use the main city code
@@ -1809,7 +1936,8 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
           extractedPostId = urlIdMatch[1];
           logger.debug(`Extracted post ID from URL: ${extractedPostId}`);
         } else {
-          extractedPostId = listing.postId || index.toString();
+          // Don't use index as fallback - only use valid post IDs
+          extractedPostId = listing.postId || null;
         }
 
         return {
@@ -1827,19 +1955,29 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
         };
       });
 
-      // Filter out results with invalid URLs
+      // Filter out results with invalid URLs or missing post IDs
       const validResults = results.filter(result => {
+        // Check if we have a valid post ID
+        const hasValidPostId = result.id && result.id !== 'null' && /^\d{7,}$/.test(result.id);
+
+        // Check if URL is valid
         const isValidUrl =
           result.url &&
+          result.url.startsWith('https://') &&
           result.url.includes('/d/') &&
           result.url.includes('.html') &&
-          !result.url.endsWith(`/${category}/`);
+          !result.url.endsWith(`/${category}/`) &&
+          result.url.match(/\/\d{7,}\.html$/); // Must end with a numeric ID (7+ digits) and .html
 
-        if (!isValidUrl) {
-          logger.debug(`Filtering out result with invalid URL: ${result.url}`);
+        const isValid = hasValidPostId && isValidUrl;
+
+        if (!isValid) {
+          logger.debug(
+            `Filtering out result - hasValidPostId: ${hasValidPostId}, isValidUrl: ${isValidUrl}, URL: ${result.url}, ID: ${result.id}`
+          );
         }
 
-        return isValidUrl;
+        return isValid;
       });
 
       logger.debug(
@@ -2211,15 +2349,21 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
               logger.debug(`Using post ID from identifier/id property: ${postId}`);
             }
 
-            // If the URL already has the correct format, use it
-            if (item.url && item.url.includes('/d/') && item.url.includes('.html')) {
+            // If the URL already has the correct format and is a full URL, use it
+            if (
+              item.url &&
+              item.url.startsWith('https://') &&
+              item.url.includes('/d/') &&
+              item.url.includes('.html')
+            ) {
               url = item.url;
               logger.debug(`Using existing direct URL: ${url}`);
             }
-            // If we have a best match with a direct URL, use that
+            // If we have a best match with a direct URL that's a full URL, use that
             else if (
               bestMatch &&
               bestMatch.url &&
+              bestMatch.url.startsWith('https://') &&
               bestMatch.url.includes('/d/') &&
               bestMatch.url.includes('.html')
             ) {
@@ -2231,7 +2375,8 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
               postId &&
               typeof postId === 'string' &&
               /^\d+$/.test(postId) &&
-              postId !== '0'
+              postId !== '0' &&
+              postId.length >= 7
             ) {
               // Create a slug from the title
               const slug = title ? createSlugFromTitle(title) : 'craigslist-posting';
@@ -2678,9 +2823,11 @@ async function parseSearchResults(html, city, category, query, fetchDetails = fa
       const validResults = results.filter(result => {
         const isValidUrl =
           result.url &&
+          result.url.startsWith('https://') &&
           result.url.includes('/d/') &&
           result.url.includes('.html') &&
-          !result.url.endsWith(`/${category}/`);
+          !result.url.endsWith(`/${category}/`) &&
+          result.url.match(/\/\d{7,}\.html$/); // Must end with a numeric ID (7+ digits) and .html
 
         if (!isValidUrl) {
           logger.debug(`Filtering out result with invalid URL: ${result.url}`);
@@ -3514,6 +3661,7 @@ function parsePostingDetails(html, url) {
 
     // Look for posting info elements which often contain important metadata
     const postingInfoElements = document.querySelectorAll('.postinginfo');
+
     postingInfoElements.forEach(element => {
       const text = element.textContent.trim();
 
@@ -3523,16 +3671,48 @@ function parsePostingDetails(html, url) {
         addAttribute('post id', postIdMatch[1]);
       }
 
-      // Extract posting date
-      const postedMatch = text.match(/posted:\s*(.*)/i);
-      if (postedMatch) {
-        addAttribute('posted', postedMatch[1].trim());
+      // Extract posting date from time element with datetime attribute
+      if (text.includes('posted:')) {
+        const timeElement = element.querySelector('time.date.timeago');
+        if (timeElement) {
+          const datetime = timeElement.getAttribute('datetime');
+          const title = timeElement.getAttribute('title');
+          const textContent = timeElement.textContent.trim();
+
+          if (datetime) {
+            addAttribute('posted datetime', datetime);
+            addAttribute('posted', title || textContent);
+            logger.debug(`Extracted posting date: ${datetime} (${textContent})`);
+          }
+        } else {
+          // Fallback to text parsing if no time element
+          const postedMatch = text.match(/posted:\s*(.*)/i);
+          if (postedMatch) {
+            addAttribute('posted', postedMatch[1].trim());
+          }
+        }
       }
 
-      // Extract update date
-      const updatedMatch = text.match(/updated:\s*(.*)/i);
-      if (updatedMatch) {
-        addAttribute('updated', updatedMatch[1].trim());
+      // Extract update date from time element with datetime attribute
+      if (text.includes('updated:')) {
+        const timeElement = element.querySelector('time.date.timeago');
+        if (timeElement) {
+          const datetime = timeElement.getAttribute('datetime');
+          const title = timeElement.getAttribute('title');
+          const textContent = timeElement.textContent.trim();
+
+          if (datetime) {
+            addAttribute('updated datetime', datetime);
+            addAttribute('updated', title || textContent);
+            logger.debug(`Extracted updated date: ${datetime} (${textContent})`);
+          }
+        } else {
+          // Fallback to text parsing if no time element
+          const updatedMatch = text.match(/updated:\s*(.*)/i);
+          if (updatedMatch) {
+            addAttribute('updated', updatedMatch[1].trim());
+          }
+        }
       }
     });
 
