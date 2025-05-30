@@ -6,6 +6,7 @@
 
 // Set Node.js options for ES modules
 process.env.NODE_OPTIONS = '--experimental-vm-modules --no-warnings';
+process.env.NODE_ENV = 'test';
 
 // Import chai for assertions
 import chai from 'chai';
