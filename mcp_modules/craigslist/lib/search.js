@@ -31,6 +31,11 @@ export async function searchCraigslist(params) {
     isNestedCall = false, // Flag to prevent infinite recursion
   } = params;
 
+  // Debug log to see if includeDetails is being passed correctly
+  logger.info(
+    `searchCraigslist called with includeDetails=${includeDetails}, params=${JSON.stringify(params)}`
+  );
+
   try {
     // Validate city if provided
     if (city && city !== 'sandiego') {
@@ -86,24 +91,32 @@ export async function searchCraigslist(params) {
     // Fetch posting details if requested
     if (includeDetails) {
       logger.info('Fetching posting details...');
+      logger.info(`includeDetails is true, limitedResults.length=${limitedResults.length}`);
+
       const detailsFetcher = async url => {
         try {
+          logger.info(`Fetching details for URL: ${url}`);
           const response = usePuppeteer ? await fetchWithPuppeteer(url) : await fetchWithRetry(url);
 
           const html = await response.text();
+          logger.info(`Received HTML response of length: ${html.length} for details`);
 
           if (isErrorPage(html)) {
             throw new Error(`Invalid or empty content received for ${url}`);
           }
 
-          return parsePostingDetails(html, url);
+          const details = parsePostingDetails(html, url);
+          logger.info(`Successfully parsed details for ${url}`);
+          return details;
         } catch (error) {
           logger.error(`Error fetching details for ${url}: ${error.message}`);
           throw error;
         }
       };
 
+      logger.info(`Calling processPostingDetails with ${limitedResults.length} results`);
       const resultsWithDetails = await processPostingDetails(limitedResults, detailsFetcher);
+      logger.info(`Received ${resultsWithDetails.length} results with details`);
       return deduplicateByTitle(resultsWithDetails);
     }
 
@@ -122,6 +135,10 @@ export async function searchCraigslist(params) {
 async function searchMultipleCities(params) {
   const { cities, ...searchParams } = params;
 
+  // Debug log to see what parameters are being passed
+  logger.info(`searchMultipleCities called with params=${JSON.stringify(params)}`);
+  logger.info(`searchParams after destructuring: ${JSON.stringify(searchParams)}`);
+
   // Validate cities array
   if (!Array.isArray(cities) || cities.length === 0) {
     logger.warn('Invalid or empty cities array provided to searchMultipleCities');
@@ -133,12 +150,21 @@ async function searchMultipleCities(params) {
   const cityProcessor = async city => {
     try {
       logger.info(`Processing city ${city} with direct search`);
-      // Pass isDirectSearch flag to prevent recursion
-      const cityResults = await searchCraigslist({
+
+      // Debug log to see what parameters are being passed to searchCraigslist
+      const searchCraigslistParams = {
         ...searchParams,
         city,
         isDirectSearch: true,
-      });
+      };
+
+      logger.info(
+        `Calling searchCraigslist with params: ${JSON.stringify(searchCraigslistParams)}`
+      );
+      logger.info(`includeDetails value being passed: ${searchCraigslistParams.includeDetails}`);
+
+      // Pass isDirectSearch flag to prevent recursion
+      const cityResults = await searchCraigslist(searchCraigslistParams);
 
       if (cityResults && cityResults.length > 0) {
         logger.info(`Found ${cityResults.length} results for city ${city}`);

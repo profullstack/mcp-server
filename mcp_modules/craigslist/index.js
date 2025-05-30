@@ -209,11 +209,10 @@ export async function register(app) {
         fetchDetails: searchOptions.fetchDetails,
       };
 
-      const results = await craigslistAPI.searchMultipleCities(
-        searchParams,
-        citiesToSearch.slice(0, searchOptions.limit)
-      );
+      // Only pass the searchParams object, not the cities array separately
+      const results = await craigslistAPI.searchMultipleCities(searchParams);
 
+      // Add detailed information to the response
       return c.json({
         tool: 'craigslist',
         query: params.query,
@@ -224,6 +223,7 @@ export async function register(app) {
         count: results.length,
         results,
         timestamp: new Date().toISOString(),
+        fetchDetails: searchOptions.fetchDetails, // Include this flag in the response
       });
     } catch (error) {
       return c.json({ error: error.message }, 500);

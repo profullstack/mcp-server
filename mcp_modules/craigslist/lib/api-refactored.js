@@ -124,9 +124,60 @@ export class CraigslistAPI {
   async searchMultipleCities(params = {}, cities = []) {
     try {
       logger.info(`CraigslistAPI.searchMultipleCities called for ${cities.length} cities`);
-      const searchParams = { ...params, cities };
-      const results = await searchCraigslist(searchParams);
-      return deduplicateByTitle(results);
+
+      // Use cities from params if provided, otherwise use the cities parameter
+      const citiesToSearch = params.cities && params.cities.length > 0 ? params.cities : cities;
+
+      // Map fetchDetails to includeDetails for compatibility with searchCraigslist
+      const searchParams = {
+        ...params,
+        cities: citiesToSearch,
+        includeDetails: params.fetchDetails === true,
+      };
+
+      logger.info(`Fetching details: ${searchParams.includeDetails}`);
+
+      try {
+        const results = await searchCraigslist(searchParams);
+        return deduplicateByTitle(results);
+      } catch (searchError) {
+        // If the search fails but we have partial results, log the error but don't throw
+        logger.error(`Error in searchCraigslist: ${searchError.message}`);
+
+        // Try to search each city individually to get partial results
+        logger.info('Attempting to search each city individually');
+        const allResults = [];
+
+        for (const city of citiesToSearch) {
+          try {
+            const cityParams = {
+              ...params,
+              city,
+              includeDetails: params.fetchDetails === true,
+              isDirectSearch: true,
+            };
+
+            logger.info(`Searching city ${city} individually`);
+            const cityResults = await searchCraigslist(cityParams);
+
+            if (cityResults && cityResults.length > 0) {
+              logger.info(`Found ${cityResults.length} results for city ${city}`);
+              allResults.push(...cityResults.map(result => ({ ...result, city })));
+            }
+          } catch (cityError) {
+            logger.error(`Error searching city ${city}: ${cityError.message}`);
+            // Continue with next city
+          }
+        }
+
+        if (allResults.length > 0) {
+          logger.info(`Returning ${allResults.length} results from individual city searches`);
+          return deduplicateByTitle(allResults);
+        }
+
+        // If we still have no results, throw the original error
+        throw searchError;
+      }
     } catch (error) {
       logger.error(`CraigslistAPI.searchMultipleCities error: ${error.message}`);
       throw error;
