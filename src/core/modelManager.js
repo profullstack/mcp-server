@@ -269,17 +269,20 @@ export async function performInference(modelId, data) {
       throw error;
     }
 
-    if (!modelState.models[modelId]) {
-      throw new Error(`Model ${modelId} not found`);
-    }
-
-    if (modelState.models[modelId].status !== 'activated') {
-      throw new Error(`Model ${modelId} is not activated`);
+    // Auto-activate the model if it's not already activated
+    if (!modelState.models[modelId] || modelState.models[modelId].status !== 'activated') {
+      try {
+        logger.info(`Auto-activating model ${modelId} for inference`);
+        await activateModel(modelId, {});
+      } catch (error) {
+        logger.error(`Failed to auto-activate model ${modelId}: ${error.message}`);
+        throw new Error(`Model ${modelId} not found or could not be activated`);
+      }
     }
 
     // Get the appropriate provider for this model
     const provider = getProviderForModel(modelId);
-    
+
     if (!provider) {
       throw new Error(`No provider available for model ${modelId}`);
     }
@@ -337,17 +340,20 @@ export async function performStreamingInference(modelId, data) {
       throw error;
     }
 
-    if (!modelState.models[modelId]) {
-      throw new Error(`Model ${modelId} not found`);
-    }
-
-    if (modelState.models[modelId].status !== 'activated') {
-      throw new Error(`Model ${modelId} is not activated`);
+    // Auto-activate the model if it's not already activated
+    if (!modelState.models[modelId] || modelState.models[modelId].status !== 'activated') {
+      try {
+        logger.info(`Auto-activating model ${modelId} for streaming inference`);
+        await activateModel(modelId, {});
+      } catch (error) {
+        logger.error(`Failed to auto-activate model ${modelId}: ${error.message}`);
+        throw new Error(`Model ${modelId} not found or could not be activated`);
+      }
     }
 
     // Get the appropriate provider for this model
     const provider = getProviderForModel(modelId);
-    
+
     if (!provider) {
       throw new Error(`No provider available for model ${modelId}`);
     }
@@ -394,4 +400,47 @@ export async function performStreamingInference(modelId, data) {
     logger.error(`Streaming inference error with model ${modelId}: ${error.message}`);
     throw error;
   }
+}
+
+/**
+ * Activates all available models
+ * @returns {Promise<Object>} Activation results
+ */
+export async function activateAllModels() {
+  try {
+    logger.info('Activating all available models');
+
+    const results = [];
+
+    for (const model of modelState.availableModels) {
+      try {
+        const result = await activateModel(model.id, {});
+        results.push(result);
+        logger.info(`Model ${model.id} activated successfully`);
+      } catch (error) {
+        logger.error(`Failed to activate model ${model.id}: ${error.message}`);
+        results.push({
+          modelId: model.id,
+          status: 'error',
+          error: error.message,
+        });
+      }
+    }
+
+    return {
+      status: 'completed',
+      results,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    logger.error(`Error activating all models: ${error.message}`);
+    throw error;
+  }
+}
+
+// Auto-activate all models when the module is loaded (if not in test environment)
+if (!global.testOverrides) {
+  activateAllModels().catch(error => {
+    logger.error(`Failed to auto-activate models on startup: ${error.message}`);
+  });
 }

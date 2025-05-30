@@ -135,6 +135,24 @@ export function setupCoreRoutes(app) {
     return c.json({ success: true });
   });
 
+  // Activate all models
+  app.post('/models/activate-all', async c => {
+    try {
+      const result = await modelManager.activateAllModels();
+      return c.json(result);
+    } catch (error) {
+      return c.json(
+        {
+          error: {
+            code: 'models_activation_failed',
+            message: error.message || 'Failed to activate all models',
+          },
+        },
+        500
+      );
+    }
+  });
+
   // Get active model information
   app.get('/model/active', async c => {
     // For tests, we need to handle the case where the active model is set directly
