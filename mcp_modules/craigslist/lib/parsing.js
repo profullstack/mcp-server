@@ -23,6 +23,81 @@ export function parseSearchResults(html, city) {
     const dom = new JSDOM(html);
     const document = dom.window.document;
 
+    // First try to extract results from JSON-LD data (modern Craigslist UI)
+    const jsonLdScript = document.querySelector('script#ld_searchpage_results');
+    if (jsonLdScript) {
+      try {
+        const jsonLdContent = jsonLdScript.textContent.trim();
+        if (jsonLdContent) {
+          const jsonData = JSON.parse(jsonLdContent);
+
+          // Check if we have itemListElement in the JSON-LD data
+          if (jsonData && jsonData.itemListElement && Array.isArray(jsonData.itemListElement)) {
+            logger.info(`Found ${jsonData.itemListElement.length} results in JSON-LD data`);
+
+            // Parse results from JSON-LD
+            const parsedResults = jsonData.itemListElement
+              .filter(item => item && item.item)
+              .map(item => {
+                const itemData = item.item;
+
+                // Extract data from JSON-LD structure
+                const postingIdMatch =
+                  itemData.offers?.availableAtOrFrom?.address?.postalCode ||
+                  (itemData.url ? itemData.url.match(/\/(\d+)\.html/) : null);
+                const postingId = postingIdMatch
+                  ? Array.isArray(postingIdMatch)
+                    ? postingIdMatch[1]
+                    : postingIdMatch
+                  : null;
+
+                // Extract price from offers
+                const price = itemData.offers?.price ? parseFloat(itemData.offers.price) : null;
+                const priceText = itemData.offers?.price ? `$${itemData.offers.price}` : '';
+
+                // Extract location
+                const location = itemData.offers?.availableAtOrFrom?.address?.addressLocality || '';
+
+                // Extract image URL
+                const imageUrl =
+                  Array.isArray(itemData.image) && itemData.image.length > 0
+                    ? itemData.image[0]
+                    : typeof itemData.image === 'string'
+                      ? itemData.image
+                      : null;
+
+                return {
+                  id: postingId,
+                  title: itemData.name || '',
+                  url: itemData.url || '',
+                  price,
+                  priceText,
+                  location,
+                  date: null, // Date not available in JSON-LD
+                  imageUrl,
+                  city,
+                  subcity: extractSubcityFromUrl(itemData.url),
+                  slug: getSlugWithFallback(itemData.url, itemData.name),
+                  description: itemData.description || '',
+                };
+              })
+              .filter(result => result.title && result.url); // Filter out incomplete results
+
+            if (parsedResults.length > 0) {
+              logger.info(
+                `Successfully parsed ${parsedResults.length} search results from JSON-LD`
+              );
+              return parsedResults;
+            }
+          }
+        }
+      } catch (jsonError) {
+        logger.error(`Error parsing JSON-LD data: ${jsonError.message}`);
+        // Continue with traditional parsing if JSON-LD parsing fails
+      }
+    }
+
+    // Traditional parsing as fallback
     // Try multiple selectors for search results
     const selectors = [
       '.cl-search-result',
@@ -427,6 +502,35 @@ export function isErrorPage(html) {
     return true;
   }
 
+  // Check for JSON-LD data which indicates a valid page in modern UI
+  if (
+    html.includes('script id="ld_searchpage_results"') ||
+    html.includes('script type="application/ld+json" id="ld_searchpage_data"')
+  ) {
+    // If we have JSON-LD data, check if it contains actual results
+    try {
+      const dom = new JSDOM(html);
+      const document = dom.window.document;
+
+      const jsonLdScript = document.querySelector('script#ld_searchpage_results');
+      if (jsonLdScript) {
+        const jsonData = JSON.parse(jsonLdScript.textContent.trim());
+        if (
+          jsonData &&
+          jsonData.itemListElement &&
+          Array.isArray(jsonData.itemListElement) &&
+          jsonData.itemListElement.length > 0
+        ) {
+          // We have results, so this is not an error page
+          return false;
+        }
+      }
+    } catch (error) {
+      // If we can't parse the JSON-LD, continue with the regular error checks
+      logger.debug(`Error checking JSON-LD data: ${error.message}`);
+    }
+  }
+
   const errorIndicators = [
     'Page Not Found',
     'This posting has been deleted',
@@ -440,7 +544,19 @@ export function isErrorPage(html) {
   ];
 
   const lowerHtml = html.toLowerCase();
-  return errorIndicators.some(indicator => lowerHtml.includes(indicator.toLowerCase()));
+
+  // Check for specific error indicators
+  if (errorIndicators.some(indicator => lowerHtml.includes(indicator.toLowerCase()))) {
+    return true;
+  }
+
+  // Check if the page has a "no results found" message but is otherwise valid
+  if (lowerHtml.includes('no results found') && !lowerHtml.includes('retrieving results')) {
+    // This is not an error page, just a valid page with no results
+    return false;
+  }
+
+  return false;
 }
 
 /**
