@@ -180,12 +180,20 @@ export function setupCoreRoutes(app) {
 
       // Add headers to the body object only if not in test environment
       if (!global.testOverrides) {
-        // Handle headers in a more compatible way
-        const headerObj = {};
-        for (const [key, value] of Object.entries(c.req.headers || {})) {
-          headerObj[key.toLowerCase()] = value;
+        // Extract authorization header using Hono's API
+        const authHeader = c.req.header('Authorization') || '';
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+        // Add API key from header if present
+        if (token) {
+          body.apiKey = token;
         }
-        body.headers = headerObj;
+
+        // Add X-API-Key header if present
+        const xApiKey = c.req.header('X-API-Key');
+        if (xApiKey) {
+          body.apiKey = xApiKey;
+        }
       }
 
       // Check if streaming is requested
@@ -260,12 +268,20 @@ export function setupCoreRoutes(app) {
 
       // Add headers to the body object only if not in test environment
       if (!global.testOverrides) {
-        // Handle headers in a more compatible way
-        const headerObj = {};
-        for (const [key, value] of Object.entries(c.req.headers || {})) {
-          headerObj[key.toLowerCase()] = value;
+        // Extract authorization header using Hono's API
+        const authHeader = c.req.header('Authorization') || '';
+        const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+        // Add API key from header if present
+        if (token) {
+          body.apiKey = token;
         }
-        body.headers = headerObj;
+
+        // Add X-API-Key header if present
+        const xApiKey = c.req.header('X-API-Key');
+        if (xApiKey) {
+          body.apiKey = xApiKey;
+        }
       }
 
       // Check if streaming is requested

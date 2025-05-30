@@ -63,15 +63,8 @@ export const openaiProvider = {
    * @returns {Promise<Object>} Inference result
    */
   async performInference(data) {
-    // Extract API key from request if provided
-    const apiKey =
-      data.apiKey ||
-      (data.headers && data.headers['x-api-key']) ||
-      (data.headers &&
-        data.headers.authorization &&
-        data.headers.authorization.startsWith('Bearer ') &&
-        data.headers.authorization.substring(7)) ||
-      config.openai.apiKey;
+    // Use API key from request or fall back to config
+    const apiKey = data.apiKey || config.openai.apiKey;
 
     // In test environment, always use config.openai.apiKey if available
     const effectiveApiKey = global.testOverrides ? config.openai.apiKey : apiKey;
@@ -137,15 +130,8 @@ export const openaiProvider = {
    * @returns {Promise<ReadableStream>} Stream of inference results
    */
   async performStreamingInference(data) {
-    // Extract API key from request if provided
-    const apiKey =
-      data.apiKey ||
-      (data.headers && data.headers['x-api-key']) ||
-      (data.headers &&
-        data.headers.authorization &&
-        data.headers.authorization.startsWith('Bearer ') &&
-        data.headers.authorization.substring(7)) ||
-      config.openai.apiKey;
+    // Use API key from request or fall back to config
+    const apiKey = data.apiKey || config.openai.apiKey;
 
     // In test environment, always use config.openai.apiKey if available
     const effectiveApiKey = global.testOverrides ? config.openai.apiKey : apiKey;
@@ -199,15 +185,8 @@ export const openaiProvider = {
    * @returns {Promise<Object>} Transcription result
    */
   async transcribeAudio(data) {
-    // Extract API key from request if provided
-    const apiKey =
-      data.apiKey ||
-      (data.headers && data.headers['x-api-key']) ||
-      (data.headers &&
-        data.headers.authorization &&
-        data.headers.authorization.startsWith('Bearer ') &&
-        data.headers.authorization.substring(7)) ||
-      config.openai.apiKey;
+    // Use API key from request or fall back to config
+    const apiKey = data.apiKey || config.openai.apiKey;
 
     // In test environment, always use config.openai.apiKey if available
     const effectiveApiKey = global.testOverrides ? config.openai.apiKey : apiKey;
@@ -286,15 +265,8 @@ export const stabilityProvider = {
    * @returns {Promise<Object>} Image generation result
    */
   async generateImage(data) {
-    // Extract API key from request if provided
-    const apiKey =
-      data.apiKey ||
-      (data.headers && data.headers['x-api-key']) ||
-      (data.headers &&
-        data.headers.authorization &&
-        data.headers.authorization.startsWith('Bearer ') &&
-        data.headers.authorization.substring(7)) ||
-      config.stability.apiKey;
+    // Use API key from request or fall back to config
+    const apiKey = data.apiKey || config.stability.apiKey;
 
     // In test environment, always use config.stability.apiKey if available
     const effectiveApiKey = global.testOverrides ? config.stability.apiKey : apiKey;
@@ -370,15 +342,8 @@ export const anthropicProvider = {
    * @returns {Promise<Object>} Inference result
    */
   async performInference(data) {
-    // Extract API key from request if provided
-    const apiKey =
-      data.apiKey ||
-      (data.headers && data.headers['x-api-key']) ||
-      (data.headers &&
-        data.headers.authorization &&
-        data.headers.authorization.startsWith('Bearer ') &&
-        data.headers.authorization.substring(7)) ||
-      config.anthropic.apiKey;
+    // Use API key from request or fall back to config
+    const apiKey = data.apiKey || config.anthropic.apiKey;
 
     // In test environment, always use config.anthropic.apiKey if available
     const effectiveApiKey = global.testOverrides ? config.anthropic.apiKey : apiKey;
@@ -433,15 +398,8 @@ export const anthropicProvider = {
    * @returns {Promise<ReadableStream>} Stream of inference results
    */
   async performStreamingInference(data) {
-    // Extract API key from request if provided
-    const apiKey =
-      data.apiKey ||
-      (data.headers && data.headers['x-api-key']) ||
-      (data.headers &&
-        data.headers.authorization &&
-        data.headers.authorization.startsWith('Bearer ') &&
-        data.headers.authorization.substring(7)) ||
-      config.anthropic.apiKey;
+    // Use API key from request or fall back to config
+    const apiKey = data.apiKey || config.anthropic.apiKey;
 
     // In test environment, always use config.anthropic.apiKey if available
     const effectiveApiKey = global.testOverrides ? config.anthropic.apiKey : apiKey;
@@ -490,15 +448,8 @@ export const huggingfaceProvider = {
    * @returns {Promise<Object>} Inference result
    */
   async performInference(data) {
-    // Extract API key from request if provided
-    const apiKey =
-      data.apiKey ||
-      (data.headers && data.headers['x-api-key']) ||
-      (data.headers &&
-        data.headers.authorization &&
-        data.headers.authorization.startsWith('Bearer ') &&
-        data.headers.authorization.substring(7)) ||
-      config.huggingface.apiKey;
+    // Use API key from request or fall back to config
+    const apiKey = data.apiKey || config.huggingface.apiKey;
 
     // In test environment, always use config.huggingface.apiKey if available
     const effectiveApiKey = global.testOverrides ? config.huggingface.apiKey : apiKey;
