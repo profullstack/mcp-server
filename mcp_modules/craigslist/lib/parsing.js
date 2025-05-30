@@ -366,8 +366,27 @@ export function parsePostingDetails(html, url) {
           const value = text.substring(colonIndex + 1).trim();
           attributes[key] = value;
         } else {
-          // Handle single values like "excellent condition"
-          attributes[text] = true;
+          // Check if this is a location attribute (typically neighborhood names)
+          if (
+            attr.closest('.attrgroup') &&
+            (text.includes('Park') ||
+              text.includes('Heights') ||
+              text.includes('Village') ||
+              text.includes('District') ||
+              text.includes('Area') ||
+              text.includes('Town') ||
+              text.includes('City') ||
+              text.includes('County') ||
+              text.includes('Beach') ||
+              text.includes('Hills') ||
+              text.includes('Valley'))
+          ) {
+            // This is likely a location, set it with "location" as the key
+            attributes['location'] = text;
+          } else {
+            // Handle other single values like "excellent condition"
+            attributes[text] = true;
+          }
         }
       }
     }
