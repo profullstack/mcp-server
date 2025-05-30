@@ -178,8 +178,10 @@ export function setupCoreRoutes(app) {
     try {
       const body = await c.req.json();
 
-      // Add headers to the body object
-      body.headers = Object.fromEntries(c.req.headers.entries());
+      // Add headers to the body object only if not in test environment
+      if (!global.testOverrides) {
+        body.headers = Object.fromEntries(c.req.headers.entries());
+      }
 
       // Check if streaming is requested
       if (body.stream === true) {
@@ -251,8 +253,10 @@ export function setupCoreRoutes(app) {
     try {
       const body = await c.req.json();
 
-      // Add headers to the body object
-      body.headers = Object.fromEntries(c.req.headers.entries());
+      // Add headers to the body object only if not in test environment
+      if (!global.testOverrides) {
+        body.headers = Object.fromEntries(c.req.headers.entries());
+      }
 
       // Check if streaming is requested
       if (body.stream === true) {

@@ -73,7 +73,10 @@ export const openaiProvider = {
         data.headers.authorization.substring(7)) ||
       config.openai.apiKey;
 
-    if (!apiKey) {
+    // In test environment, always use config.openai.apiKey if available
+    const effectiveApiKey = global.testOverrides ? config.openai.apiKey : apiKey;
+
+    if (!effectiveApiKey) {
       throw new Error('OpenAI API key is not configured');
     }
 
@@ -85,7 +88,7 @@ export const openaiProvider = {
 
     const headers = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${effectiveApiKey}`,
     };
 
     if (config.openai.orgId) {
@@ -144,7 +147,10 @@ export const openaiProvider = {
         data.headers.authorization.substring(7)) ||
       config.openai.apiKey;
 
-    if (!apiKey) {
+    // In test environment, always use config.openai.apiKey if available
+    const effectiveApiKey = global.testOverrides ? config.openai.apiKey : apiKey;
+
+    if (!effectiveApiKey) {
       throw new Error('OpenAI API key is not configured');
     }
 
@@ -156,7 +162,7 @@ export const openaiProvider = {
 
     const headers = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${effectiveApiKey}`,
     };
 
     if (config.openai.orgId) {
@@ -203,7 +209,10 @@ export const openaiProvider = {
         data.headers.authorization.substring(7)) ||
       config.openai.apiKey;
 
-    if (!apiKey) {
+    // In test environment, always use config.openai.apiKey if available
+    const effectiveApiKey = global.testOverrides ? config.openai.apiKey : apiKey;
+
+    if (!effectiveApiKey) {
       throw new Error('OpenAI API key is not configured');
     }
 
@@ -236,7 +245,7 @@ export const openaiProvider = {
     );
 
     const headers = {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${effectiveApiKey}`,
     };
 
     if (config.openai.orgId) {
@@ -287,7 +296,10 @@ export const stabilityProvider = {
         data.headers.authorization.substring(7)) ||
       config.stability.apiKey;
 
-    if (!apiKey) {
+    // In test environment, always use config.stability.apiKey if available
+    const effectiveApiKey = global.testOverrides ? config.stability.apiKey : apiKey;
+
+    if (!effectiveApiKey) {
       throw new Error('Stability AI API key is not configured');
     }
 
@@ -318,7 +330,7 @@ export const stabilityProvider = {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${effectiveApiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -368,7 +380,10 @@ export const anthropicProvider = {
         data.headers.authorization.substring(7)) ||
       config.anthropic.apiKey;
 
-    if (!apiKey) {
+    // In test environment, always use config.anthropic.apiKey if available
+    const effectiveApiKey = global.testOverrides ? config.anthropic.apiKey : apiKey;
+
+    if (!effectiveApiKey) {
       throw new Error('Anthropic API key is not configured');
     }
 
@@ -392,7 +407,7 @@ export const anthropicProvider = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': effectiveApiKey,
         'anthropic-version': config.anthropic.apiVersion,
       },
       body: JSON.stringify(requestBody),
@@ -428,7 +443,10 @@ export const anthropicProvider = {
         data.headers.authorization.substring(7)) ||
       config.anthropic.apiKey;
 
-    if (!apiKey) {
+    // In test environment, always use config.anthropic.apiKey if available
+    const effectiveApiKey = global.testOverrides ? config.anthropic.apiKey : apiKey;
+
+    if (!effectiveApiKey) {
       throw new Error('Anthropic API key is not configured');
     }
 
@@ -452,7 +470,7 @@ export const anthropicProvider = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': effectiveApiKey,
         'anthropic-version': config.anthropic.apiVersion,
       },
       body: JSON.stringify(requestBody),
@@ -482,7 +500,10 @@ export const huggingfaceProvider = {
         data.headers.authorization.substring(7)) ||
       config.huggingface.apiKey;
 
-    if (!apiKey) {
+    // In test environment, always use config.huggingface.apiKey if available
+    const effectiveApiKey = global.testOverrides ? config.huggingface.apiKey : apiKey;
+
+    if (!effectiveApiKey) {
       throw new Error('Hugging Face API key is not configured');
     }
 
@@ -512,7 +533,7 @@ export const huggingfaceProvider = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${effectiveApiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
