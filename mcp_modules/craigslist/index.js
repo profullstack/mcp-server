@@ -56,8 +56,9 @@ export async function register(app) {
       // Validate cities
       citiesToSearch = citiesToSearch.filter(city => cities.includes(city));
 
+      // If no valid cities specified, default to all cities
       if (citiesToSearch.length === 0) {
-        return c.json({ error: 'No valid cities specified' }, 400);
+        citiesToSearch = cities;
       }
 
       // Get search options
@@ -65,13 +66,19 @@ export async function register(app) {
         query: params.query || '',
         category: params.category || 'sss', // Default to all for sale
         filters: params.filters || {},
-        limit: params.maxCities || 5, // Limit number of cities to search at once
+        limit: params.maxCities !== undefined ? params.maxCities : params.cities ? 5 : null, // If cities and maxCities not provided, no limit
         fetchDetails: params.fetchDetails || false, // Whether to fetch detailed attributes
       };
 
+      // If both cities and maxCities are not provided, search all cities without limit
+      const citiesToUse =
+        searchOptions.limit !== null
+          ? citiesToSearch.slice(0, searchOptions.limit)
+          : citiesToSearch;
+
       // Perform the search using the refactored API
       const searchParams = {
-        cities: citiesToSearch.slice(0, searchOptions.limit),
+        cities: citiesToUse,
         query: searchOptions.query,
         category: searchOptions.category,
         filters: searchOptions.filters,
@@ -79,17 +86,14 @@ export async function register(app) {
         fetchDetails: searchOptions.fetchDetails,
       };
 
-      const results = await craigslistAPI.searchMultipleCities(
-        searchParams,
-        citiesToSearch.slice(0, searchOptions.limit)
-      );
+      const results = await craigslistAPI.searchMultipleCities(searchParams);
 
       return c.json({
         query: params.query,
         category: params.category,
-        cities: citiesToSearch.slice(0, searchOptions.limit),
+        cities: citiesToUse,
         totalCities: citiesToSearch.length,
-        searchedCities: Math.min(citiesToSearch.length, searchOptions.limit),
+        searchedCities: citiesToUse.length,
         count: results.length,
         results,
       });
@@ -186,8 +190,9 @@ export async function register(app) {
       // Validate cities
       citiesToSearch = citiesToSearch.filter(city => cities.includes(city));
 
+      // If no valid cities specified, default to all cities
       if (citiesToSearch.length === 0) {
-        return c.json({ error: 'No valid cities specified' }, 400);
+        citiesToSearch = cities;
       }
 
       // Get search options
@@ -195,13 +200,19 @@ export async function register(app) {
         query: params.query || '',
         category: params.category || 'sss', // Default to all for sale
         filters: params.filters || {},
-        limit: params.maxCities || 5, // Limit number of cities to search at once
+        limit: params.maxCities !== undefined ? params.maxCities : params.cities ? 5 : null, // If cities and maxCities not provided, no limit
         fetchDetails: params.fetchDetails || false, // Whether to fetch detailed attributes
       };
 
+      // If both cities and maxCities are not provided, search all cities without limit
+      const citiesToUse =
+        searchOptions.limit !== null
+          ? citiesToSearch.slice(0, searchOptions.limit)
+          : citiesToSearch;
+
       // Perform the search using the refactored API
       const searchParams = {
-        cities: citiesToSearch.slice(0, searchOptions.limit),
+        cities: citiesToUse,
         query: searchOptions.query,
         category: searchOptions.category,
         filters: searchOptions.filters,
@@ -209,7 +220,7 @@ export async function register(app) {
         fetchDetails: searchOptions.fetchDetails,
       };
 
-      // Only pass the searchParams object, not the cities array separately
+      // Only pass the searchParams object
       const results = await craigslistAPI.searchMultipleCities(searchParams);
 
       // Add detailed information to the response
@@ -217,9 +228,9 @@ export async function register(app) {
         tool: 'craigslist',
         query: params.query,
         category: params.category,
-        cities: citiesToSearch.slice(0, searchOptions.limit),
+        cities: citiesToUse,
         totalCities: citiesToSearch.length,
-        searchedCities: Math.min(citiesToSearch.length, searchOptions.limit),
+        searchedCities: citiesToUse.length,
         count: results.length,
         results,
         timestamp: new Date().toISOString(),
