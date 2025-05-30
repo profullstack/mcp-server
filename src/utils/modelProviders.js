@@ -63,16 +63,29 @@ export const openaiProvider = {
    * @returns {Promise<Object>} Inference result
    */
   async performInference(data) {
-    if (!config.openai.apiKey) {
+    // Extract API key from request if provided
+    const apiKey =
+      data.apiKey ||
+      (data.headers && data.headers['x-api-key']) ||
+      (data.headers &&
+        data.headers.authorization &&
+        data.headers.authorization.startsWith('Bearer ') &&
+        data.headers.authorization.substring(7)) ||
+      config.openai.apiKey;
+
+    if (!apiKey) {
       throw new Error('OpenAI API key is not configured');
     }
+
+    // Delete apiKey from data to avoid sending it to OpenAI
+    if (data.apiKey) delete data.apiKey;
 
     const model = data.model || config.openai.defaultModel;
     const url = `${config.openai.baseUrl}/chat/completions`;
 
     const headers = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.openai.apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     };
 
     if (config.openai.orgId) {
@@ -121,16 +134,29 @@ export const openaiProvider = {
    * @returns {Promise<ReadableStream>} Stream of inference results
    */
   async performStreamingInference(data) {
-    if (!config.openai.apiKey) {
+    // Extract API key from request if provided
+    const apiKey =
+      data.apiKey ||
+      (data.headers && data.headers['x-api-key']) ||
+      (data.headers &&
+        data.headers.authorization &&
+        data.headers.authorization.startsWith('Bearer ') &&
+        data.headers.authorization.substring(7)) ||
+      config.openai.apiKey;
+
+    if (!apiKey) {
       throw new Error('OpenAI API key is not configured');
     }
+
+    // Delete apiKey from data to avoid sending it to OpenAI
+    if (data.apiKey) delete data.apiKey;
 
     const model = data.model || config.openai.defaultModel;
     const url = `${config.openai.baseUrl}/chat/completions`;
 
     const headers = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.openai.apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     };
 
     if (config.openai.orgId) {
@@ -167,9 +193,22 @@ export const openaiProvider = {
    * @returns {Promise<Object>} Transcription result
    */
   async transcribeAudio(data) {
-    if (!config.openai.apiKey) {
+    // Extract API key from request if provided
+    const apiKey =
+      data.apiKey ||
+      (data.headers && data.headers['x-api-key']) ||
+      (data.headers &&
+        data.headers.authorization &&
+        data.headers.authorization.startsWith('Bearer ') &&
+        data.headers.authorization.substring(7)) ||
+      config.openai.apiKey;
+
+    if (!apiKey) {
       throw new Error('OpenAI API key is not configured');
     }
+
+    // Delete apiKey from data to avoid sending it to OpenAI
+    if (data.apiKey) delete data.apiKey;
 
     if (!data.audioFile) {
       throw new Error('Audio file is required for transcription');
@@ -197,7 +236,7 @@ export const openaiProvider = {
     );
 
     const headers = {
-      Authorization: `Bearer ${config.openai.apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     };
 
     if (config.openai.orgId) {
@@ -238,9 +277,22 @@ export const stabilityProvider = {
    * @returns {Promise<Object>} Image generation result
    */
   async generateImage(data) {
-    if (!config.stability.apiKey) {
+    // Extract API key from request if provided
+    const apiKey =
+      data.apiKey ||
+      (data.headers && data.headers['x-api-key']) ||
+      (data.headers &&
+        data.headers.authorization &&
+        data.headers.authorization.startsWith('Bearer ') &&
+        data.headers.authorization.substring(7)) ||
+      config.stability.apiKey;
+
+    if (!apiKey) {
       throw new Error('Stability AI API key is not configured');
     }
+
+    // Delete apiKey from data to avoid sending it to Stability
+    if (data.apiKey) delete data.apiKey;
 
     const engine = data.engine || config.stability.defaultEngine;
     const url = `${config.stability.baseUrl}/generation/${engine}/text-to-image`;
@@ -266,7 +318,7 @@ export const stabilityProvider = {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        Authorization: `Bearer ${config.stability.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
@@ -306,9 +358,22 @@ export const anthropicProvider = {
    * @returns {Promise<Object>} Inference result
    */
   async performInference(data) {
-    if (!config.anthropic.apiKey) {
+    // Extract API key from request if provided
+    const apiKey =
+      data.apiKey ||
+      (data.headers && data.headers['x-api-key']) ||
+      (data.headers &&
+        data.headers.authorization &&
+        data.headers.authorization.startsWith('Bearer ') &&
+        data.headers.authorization.substring(7)) ||
+      config.anthropic.apiKey;
+
+    if (!apiKey) {
       throw new Error('Anthropic API key is not configured');
     }
+
+    // Delete apiKey from data to avoid sending it to Anthropic
+    if (data.apiKey) delete data.apiKey;
 
     const model = data.model || config.anthropic.defaultModel;
     const url = `${config.anthropic.baseUrl}/v1/messages`;
@@ -327,7 +392,7 @@ export const anthropicProvider = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': config.anthropic.apiKey,
+        'x-api-key': apiKey,
         'anthropic-version': config.anthropic.apiVersion,
       },
       body: JSON.stringify(requestBody),
@@ -353,9 +418,22 @@ export const anthropicProvider = {
    * @returns {Promise<ReadableStream>} Stream of inference results
    */
   async performStreamingInference(data) {
-    if (!config.anthropic.apiKey) {
+    // Extract API key from request if provided
+    const apiKey =
+      data.apiKey ||
+      (data.headers && data.headers['x-api-key']) ||
+      (data.headers &&
+        data.headers.authorization &&
+        data.headers.authorization.startsWith('Bearer ') &&
+        data.headers.authorization.substring(7)) ||
+      config.anthropic.apiKey;
+
+    if (!apiKey) {
       throw new Error('Anthropic API key is not configured');
     }
+
+    // Delete apiKey from data to avoid sending it to Anthropic
+    if (data.apiKey) delete data.apiKey;
 
     const model = data.model || config.anthropic.defaultModel;
     const url = `${config.anthropic.baseUrl}/v1/messages`;
@@ -374,7 +452,7 @@ export const anthropicProvider = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': config.anthropic.apiKey,
+        'x-api-key': apiKey,
         'anthropic-version': config.anthropic.apiVersion,
       },
       body: JSON.stringify(requestBody),
@@ -394,9 +472,22 @@ export const huggingfaceProvider = {
    * @returns {Promise<Object>} Inference result
    */
   async performInference(data) {
-    if (!config.huggingface.apiKey) {
+    // Extract API key from request if provided
+    const apiKey =
+      data.apiKey ||
+      (data.headers && data.headers['x-api-key']) ||
+      (data.headers &&
+        data.headers.authorization &&
+        data.headers.authorization.startsWith('Bearer ') &&
+        data.headers.authorization.substring(7)) ||
+      config.huggingface.apiKey;
+
+    if (!apiKey) {
       throw new Error('Hugging Face API key is not configured');
     }
+
+    // Delete apiKey from data to avoid sending it to Hugging Face
+    if (data.apiKey) delete data.apiKey;
 
     if (!data.model) {
       throw new Error('Model name is required for Hugging Face inference');
@@ -421,7 +512,7 @@ export const huggingfaceProvider = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.huggingface.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });

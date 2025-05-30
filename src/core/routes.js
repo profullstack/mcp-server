@@ -178,6 +178,9 @@ export function setupCoreRoutes(app) {
     try {
       const body = await c.req.json();
 
+      // Add headers to the body object
+      body.headers = Object.fromEntries(c.req.headers.entries());
+
       // Check if streaming is requested
       if (body.stream === true) {
         // Set up streaming response
@@ -247,6 +250,9 @@ export function setupCoreRoutes(app) {
 
     try {
       const body = await c.req.json();
+
+      // Add headers to the body object
+      body.headers = Object.fromEntries(c.req.headers.entries());
 
       // Check if streaming is requested
       if (body.stream === true) {
