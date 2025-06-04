@@ -127,12 +127,14 @@ curl "https://mcp.profullstack.com/fake_json/weather/forecast/daily"
 # Get fake API settings
 curl "https://mcp.profullstack.com/fake_json/api/settings"
 
-# Using your OpenAI API key (replace with your actual key)
+# Using your OpenAI API key as a query parameter (replace with your actual key)
 curl "https://mcp.profullstack.com/fake_json/users/123?apiKey=sk-your-openai-api-key"
 
-# Using your OpenAI API key with the header approach
-curl "https://mcp.profullstack.com/fake_json/products" \
-  -H "x-api-key: sk-your-openai-api-key"
+# Using your OpenAI API key with the header approach for GET requests
+curl -H "x-api-key: sk-your-openai-api-key" "https://mcp.profullstack.com/fake_json/products"
+
+# Using your OpenAI API key with the header approach for GET requests with fields
+curl -H "x-api-key: sk-your-openai-api-key" "https://mcp.profullstack.com/fake_json/products?fields=id,name,price"
 
 # Use the MCP tool endpoint
 curl -X POST "https://mcp.profullstack.com/tools/fake_json" \
