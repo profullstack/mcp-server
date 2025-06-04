@@ -45,6 +45,11 @@ export async function register(app) {
           description: 'Comma-separated list of fields to include in the response',
           required: false,
         },
+        apiKey: {
+          type: 'string',
+          description: 'OpenAI API key to use for inference',
+          required: false,
+        },
       },
     });
   });
@@ -59,7 +64,11 @@ export async function register(app) {
         return c.json({ error: 'Missing required parameter: endpoint' }, 400);
       }
 
-      const result = await fakeJsonService.generateJson(params.endpoint, params.fields);
+      const result = await fakeJsonService.generateJson(
+        params.endpoint,
+        params.fields,
+        params.apiKey
+      );
 
       return c.json({
         tool: 'fake_json',

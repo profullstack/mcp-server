@@ -19,13 +19,16 @@ export async function generateJsonResponse(c) {
     // Extract fields from query parameters if provided
     const fields = c.req.query('fields');
 
+    // Extract API key from query parameters or headers
+    const apiKey = c.req.query('apiKey') || c.req.header('x-api-key');
+
     // Generate the JSON response
-    const jsonResponse = await fakeJsonService.generateJson(path, fields);
+    const jsonResponse = await fakeJsonService.generateJson(path, fields, apiKey);
 
     // Set CORS headers
     c.header('Access-Control-Allow-Origin', '*');
     c.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    c.header('Access-Control-Allow-Headers', 'Content-Type');
+    c.header('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
 
     // Return the JSON response
     return c.json(jsonResponse);

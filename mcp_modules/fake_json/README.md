@@ -51,11 +51,20 @@ fake_json/
 When making requests to `/fake_json/*`, you can use the following query parameters:
 
 - `fields` - Comma-separated list of fields to include in the response
+- `apiKey` - Your OpenAI API key (if the server doesn't have one configured)
 
-Example:
+Examples:
 
 ```
 GET /fake_json/users?fields=id,name,email
+GET /fake_json/products?apiKey=sk-your-openai-api-key
+GET /fake_json/weather?fields=temperature,humidity&apiKey=sk-your-openai-api-key
+```
+
+You can also pass the API key as an HTTP header:
+
+```
+x-api-key: sk-your-openai-api-key
 ```
 
 ## MCP Tool
@@ -70,6 +79,7 @@ const result = await useMcpTool({
   arguments: {
     endpoint: '/users/123',
     fields: 'id,name,email',
+    apiKey: 'sk-your-openai-api-key', // Optional: Your OpenAI API key
   },
 });
 ```
@@ -78,7 +88,7 @@ const result = await useMcpTool({
 
 See the [examples](examples/) directory for complete usage examples.
 
-Basic example:
+### JavaScript Examples
 
 ```javascript
 // Get fake user data
@@ -93,6 +103,48 @@ const productsResponse = await fetch(
 const productsData = await productsResponse.json();
 console.log(productsData);
 ```
+
+### Curl Examples
+
+Using the public mcp.profullstack.com instance:
+
+```bash
+# Get module information
+curl "https://mcp.profullstack.com/fake_json"
+
+# Get fake user data
+curl "https://mcp.profullstack.com/fake_json/users/123"
+
+# Get fake product data with specific fields
+curl "https://mcp.profullstack.com/fake_json/products?fields=id,name,price,description"
+
+# Get fake blog posts
+curl "https://mcp.profullstack.com/fake_json/blog/posts"
+
+# Get fake weather data
+curl "https://mcp.profullstack.com/fake_json/weather/forecast/daily"
+
+# Get fake API settings
+curl "https://mcp.profullstack.com/fake_json/api/settings"
+
+# Using your OpenAI API key (replace with your actual key)
+curl "https://mcp.profullstack.com/fake_json/users/123?apiKey=sk-your-openai-api-key"
+
+# Using your OpenAI API key with the header approach
+curl "https://mcp.profullstack.com/fake_json/products" \
+  -H "x-api-key: sk-your-openai-api-key"
+
+# Use the MCP tool endpoint
+curl -X POST "https://mcp.profullstack.com/tools/fake_json" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "endpoint": "/users/123",
+    "fields": "id,name,email,address",
+    "apiKey": "sk-your-openai-api-key"
+  }'
+```
+
+Note: When using curl with URLs that contain query parameters (like `?fields=...`), it's important to enclose the URL in quotes to prevent the shell from interpreting special characters like `?` and `&` as shell wildcards or operators.
 
 ## How It Works
 

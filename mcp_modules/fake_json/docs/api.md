@@ -34,6 +34,11 @@ Generates a JSON response for any endpoint path. The path after `/fake_json/` is
 **Query Parameters:**
 
 - `fields` (optional): Comma-separated list of fields to include in the response
+- `apiKey` (optional): Your OpenAI API key if the server doesn't have one configured
+
+**Headers:**
+
+- `x-api-key` (optional): Alternative way to provide your OpenAI API key
 
 **Example Requests:**
 
@@ -41,6 +46,7 @@ Generates a JSON response for any endpoint path. The path after `/fake_json/` is
 GET /fake_json/users/123
 GET /fake_json/products?fields=id,name,price
 GET /fake_json/weather/forecast
+GET /fake_json/users/123?apiKey=sk-your-openai-api-key
 ```
 
 **Example Response for `/fake_json/users/123`:**
@@ -88,6 +94,11 @@ Returns information about the fake_json tool, including its parameters.
       "type": "string",
       "description": "Comma-separated list of fields to include in the response",
       "required": false
+    },
+    "apiKey": {
+      "type": "string",
+      "description": "OpenAI API key to use for inference",
+      "required": false
     }
   }
 }
@@ -106,7 +117,8 @@ Generates a JSON response for the specified endpoint.
 ```json
 {
   "endpoint": "/users/123",
-  "fields": "id,name,email"
+  "fields": "id,name,email",
+  "apiKey": "sk-your-openai-api-key"
 }
 ```
 
@@ -136,6 +148,7 @@ const result = await useMcpTool({
   arguments: {
     endpoint: '/users/123',
     fields: 'id,name,email,address',
+    apiKey: 'sk-your-openai-api-key', // Optional: Your OpenAI API key
   },
 });
 
@@ -159,3 +172,4 @@ Common error scenarios:
 - Invalid JSON format in the AI response
 - Inference timeout
 - Model not available
+- OpenAI API key not configured or invalid

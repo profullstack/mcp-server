@@ -27,9 +27,10 @@ export class FakeJsonService {
    * Generate a JSON response for the given endpoint
    * @param {string} endpoint - The endpoint path
    * @param {string} fields - Optional comma-separated list of fields to include
+   * @param {string} apiKey - Optional OpenAI API key
    * @returns {Promise<Object>} Generated JSON response
    */
-  async generateJson(endpoint, fields) {
+  async generateJson(endpoint, fields, apiKey) {
     try {
       // Create a cache key from the endpoint and fields
       const cacheKey = `${endpoint}:${fields || ''}`;
@@ -49,6 +50,7 @@ export class FakeJsonService {
         prompt: systemPrompt,
         temperature: 0.7,
         max_tokens: 1000,
+        apiKey: apiKey, // Pass the API key if provided
       });
 
       // Parse the response to ensure it's valid JSON
