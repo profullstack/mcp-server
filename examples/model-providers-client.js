@@ -47,9 +47,9 @@ class MCPClient {
     const response = await fetch(`${this.serverUrl}/model/${modelId}/activate`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ config })
+      body: JSON.stringify({ config }),
     });
     return response.json();
   }
@@ -63,9 +63,9 @@ class MCPClient {
     const response = await fetch(`${this.serverUrl}/model/infer`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
     return response.json();
   }
@@ -81,9 +81,9 @@ class MCPClient {
     const response = await fetch(`${this.serverUrl}/model/infer`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify(streamData)
+      body: JSON.stringify(streamData),
     });
 
     if (!response.body) {
@@ -103,22 +103,22 @@ class MCPClient {
     const formData = new FormData();
     formData.append('file', fs.createReadStream(audioFilePath));
     formData.append('model', options.model || 'whisper-1');
-    
+
     if (options.language) {
       formData.append('language', options.language);
     }
-    
+
     if (options.temperature !== undefined) {
       formData.append('temperature', options.temperature.toString());
     }
-    
+
     if (options.response_format) {
       formData.append('response_format', options.response_format);
     }
 
     const response = await fetch(`${this.serverUrl}/model/whisper/infer`, {
       method: 'POST',
-      body: formData
+      body: formData,
     });
 
     return response.json();
@@ -132,10 +132,10 @@ class MCPClient {
   async generateImage(data) {
     // First activate the stable-diffusion model
     await this.activateModel('stable-diffusion');
-    
+
     // Then perform inference
     const result = await this.infer(data);
-    
+
     return result;
   }
 }
@@ -161,27 +161,27 @@ async function main() {
 
     // Example 1: Text generation with GPT-4
     console.log('Example 1: Text generation with GPT-4');
-    
+
     // Activate GPT-4
     console.log('Activating GPT-4...');
     const activationResult = await client.activateModel('gpt-4', {
-      temperature: 0.7
+      temperature: 0.7,
     });
     console.log(activationResult);
-    
+
     // Perform inference
     console.log('Generating text...');
     const textResult = await client.infer({
       prompt: 'Explain quantum computing in simple terms',
       temperature: 0.5,
-      max_tokens: 200
+      max_tokens: 200,
     });
     console.log(textResult);
     console.log();
 
     // Example 2: Image generation with Stable Diffusion
     console.log('Example 2: Image generation with Stable Diffusion');
-    
+
     // Generate image
     console.log('Generating image...');
     const imageResult = await client.generateImage({
@@ -189,14 +189,14 @@ async function main() {
       height: 512,
       width: 512,
       steps: 20,
-      cfg_scale: 7
+      cfg_scale: 7,
     });
-    
+
     // The response includes base64-encoded images
     console.log('Image generated!');
     console.log(`Number of images: ${imageResult.response.length}`);
     console.log(`First image seed: ${imageResult.response[0].seed}`);
-    
+
     // Save the first image to a file
     if (imageResult.response && imageResult.response[0]) {
       const imageBase64 = imageResult.response[0].base64;
@@ -208,34 +208,34 @@ async function main() {
 
     // Example 3: Streaming text generation
     console.log('Example 3: Streaming text generation');
-    
+
     // Activate GPT-4 again (it's already activated, but just to be sure)
     await client.activateModel('gpt-4');
-    
+
     // Perform streaming inference
     console.log('Generating text with streaming...');
     const stream = await client.inferStream({
       prompt: 'Write a short story about a robot',
       temperature: 0.7,
-      max_tokens: 300
+      max_tokens: 300,
     });
-    
+
     // Process the stream
     console.log('Streaming response:');
-    
+
     // Create a reader for the stream
     const reader = stream.getReader();
-    let streamText = '';
-    
+
     // Read the stream
-    while (true) {
-      const { done, value } = await reader.read();
+    let done = false;
+    while (!done) {
+      const result = await reader.read();
+      done = result.done;
       if (done) break;
-      
+
       // Convert the chunk to text
-      const chunk = new TextDecoder().decode(value);
-      streamText += chunk;
-      
+      const chunk = new TextDecoder().decode(result.value);
+
       // Print the chunk
       process.stdout.write(chunk);
     }
@@ -245,7 +245,7 @@ async function main() {
     // Example 4: Speech-to-text with Whisper
     console.log('Example 4: Speech-to-text with Whisper');
     console.log('Note: This example requires an audio file. Uncomment the code to run it.');
-    
+
     /*
     // Activate Whisper
     await client.activateModel('whisper');
@@ -263,24 +263,23 @@ async function main() {
 
     // Example 5: Text generation with Claude
     console.log('Example 5: Text generation with Claude');
-    
+
     // Activate Claude
     console.log('Activating Claude...');
     const claudeActivationResult = await client.activateModel('claude-3-opus', {
-      temperature: 0.7
+      temperature: 0.7,
     });
     console.log(claudeActivationResult);
-    
+
     // Perform inference
     console.log('Generating text with Claude...');
     const claudeResult = await client.infer({
       prompt: 'Explain how neural networks work',
       temperature: 0.5,
-      max_tokens: 300
+      max_tokens: 300,
     });
     console.log(claudeResult);
     console.log();
-
   } catch (error) {
     console.error('Error:', error.message);
   }

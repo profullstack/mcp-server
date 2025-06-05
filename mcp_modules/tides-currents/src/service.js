@@ -5,12 +5,7 @@
  * Integrates with NOAA CO-OPS API for marine navigation data.
  */
 
-import {
-  validateCoordinates,
-  formatTideData,
-  formatCurrentData,
-  formatStationData,
-} from './utils.js';
+import { validateCoordinates, formatTideData, formatCurrentData } from './utils.js';
 
 /**
  * Tides and Currents service class for handling marine data operations

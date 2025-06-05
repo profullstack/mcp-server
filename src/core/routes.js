@@ -8,6 +8,7 @@ const moduleLoader = global.testOverrides?.moduleLoader || realModuleLoader;
 
 // Don't destructure to ensure we always use the latest values
 // const { getModulesInfo } = moduleLoader;
+// eslint-disable-next-line no-unused-vars
 import { config } from './config.js';
 import fs from 'fs';
 import path from 'path';

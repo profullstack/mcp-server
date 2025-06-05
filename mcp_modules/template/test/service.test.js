@@ -6,7 +6,6 @@
 
 import { expect } from 'chai';
 import { describe, it, beforeEach } from 'mocha';
-import sinon from 'sinon';
 
 import { TemplateService } from '../src/service.js';
 

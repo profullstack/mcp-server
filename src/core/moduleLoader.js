@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 // config is used for module directory configuration
+// eslint-disable-next-line no-unused-vars
 import { config } from './config.js';
 import { logger } from '../utils/logger.js';
 

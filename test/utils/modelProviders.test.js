@@ -7,6 +7,7 @@
 import { expect } from 'chai';
 import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
+// eslint-disable-next-line no-unused-vars
 import fetch from 'node-fetch';
 
 // Import the model providers
@@ -43,6 +44,7 @@ describe('Model Providers', () => {
     // Mock the fetch function by replacing it in the global scope
     global.fetch = async (url, options) => {
       // Parse the request body if it exists
+      // eslint-disable-next-line no-unused-vars
       const requestBody = options.body ? JSON.parse(options.body) : {};
 
       // Check for OpenAI API calls

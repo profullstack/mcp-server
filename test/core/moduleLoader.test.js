@@ -53,6 +53,7 @@ describe('Module Loader', () => {
   describe('loadModules()', () => {
     it('should load modules successfully', async () => {
       // Stub fs.existsSync to return true for modules directory
+      // eslint-disable-next-line no-unused-vars
       sandbox.stub(fs, 'existsSync').callsFake(path => {
         // Return true for the modules directory and module index files
         return true;
