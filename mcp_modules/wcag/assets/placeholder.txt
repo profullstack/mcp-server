@@ -1,0 +1,1 @@
+This directory is reserved for future assets like icons, images, or other static files.
