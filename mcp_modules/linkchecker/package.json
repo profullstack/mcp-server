@@ -1,0 +1,32 @@
+{
+  "name": "mcp-module-linkchecker",
+  "version": "1.0.0",
+  "description": "An MCP server module for checking links using linkinator",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "linkchecker",
+    "linkinator",
+    "link-validation"
+  ],
+  "author": "MCP Server",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "linkinator": "^6.0.4"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  }
+}
