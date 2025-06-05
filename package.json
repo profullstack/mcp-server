@@ -1,6 +1,6 @@
 {
   "name": "@profullstack/mcp-server",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "description": "A generic, modular server for implementing the Model Context Protocol (MCP)",
   "main": "index.js",
   "type": "module",
