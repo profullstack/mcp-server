@@ -1,0 +1,41 @@
+{
+  "name": "mcp-module-wcag",
+  "version": "1.0.0",
+  "description": "WCAG compliance testing module using Pa11y for MCP server",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "install-deps": "./bin/install.sh"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "wcag",
+    "accessibility",
+    "pa11y",
+    "compliance",
+    "testing"
+  ],
+  "author": "MCP Server",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "child_process": "^1.0.2"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "eslint": "^8.57.0",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  },
+  "peerDependencies": {
+    "pa11y": "^8.0.0"
+  }
+}

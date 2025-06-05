@@ -1,0 +1,8 @@
+node_modules/
+*.log
+*.json.bak
+results.json
+coverage/
+dist/
+build/
+.nyc_output/
