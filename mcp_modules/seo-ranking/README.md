@@ -383,6 +383,146 @@ curl -X POST https://mcp.profullstack.com/tools/seo-ranking \
   }'
 ```
 
+### Search Google Places via MCP Tool
+
+```bash
+curl -X POST https://mcp.profullstack.com/tools/seo-ranking \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your_valueserp_api_key" \
+  -d '{
+    "action": "places",
+    "api_key": "your_valueserp_api_key",
+    "query": "software company",
+    "domain": "profullstack.com",
+    "location": "San Francisco-Oakland-San Jose,CA,California,United States",
+    "num": "20"
+  }'
+```
+
+## JavaScript Examples
+
+### Search Google Places with Fetch
+
+```javascript
+// Using fetch API
+const response = await fetch('https://mcp.profullstack.com/seo-ranking/places', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': 'your_valueserp_api_key',
+  },
+  body: JSON.stringify({
+    api_key: 'your_valueserp_api_key',
+    query: 'software company',
+    domain: 'profullstack.com',
+    location: 'San Francisco-Oakland-San Jose,CA,California,United States',
+    num: '20',
+  }),
+});
+
+const data = await response.json();
+console.log('Places search result:', data);
+```
+
+### Search Google Places with Node.js
+
+```javascript
+import fetch from 'node-fetch';
+
+async function searchPlaces() {
+  try {
+    const response = await fetch('https://mcp.profullstack.com/seo-ranking/places', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.VALUESERP_API_KEY,
+      },
+      body: JSON.stringify({
+        query: 'software development agency',
+        domain: 'profullstack.com',
+        location: 'New York,NY,New York,United States',
+        gl: 'us',
+        hl: 'en',
+        num: '20',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.success && result.data.found) {
+      console.log(`Found ${result.data.domain} at position ${result.data.places_rank.position}`);
+      console.log(`Business: ${result.data.places_rank.title}`);
+      console.log(
+        `Rating: ${result.data.places_rank.rating} (${result.data.places_rank.reviews} reviews)`
+      );
+    } else {
+      console.log(`Domain ${result.data.domain} not found in Places results`);
+    }
+  } catch (error) {
+    console.error('Error searching places:', error);
+  }
+}
+
+searchPlaces();
+```
+
+### Check Keyword Rankings with Fetch
+
+```javascript
+// Check single keyword
+async function checkKeywordRanking() {
+  const response = await fetch('https://mcp.profullstack.com/seo-ranking/check', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.VALUESERP_API_KEY,
+    },
+    body: JSON.stringify({
+      keyword: 'software agency san jose',
+      domain: 'profullstack.com',
+      location: '98146,Washington,United States',
+      num: '100',
+    }),
+  });
+
+  const result = await response.json();
+
+  if (result.success && result.data.found) {
+    console.log(`Found at organic position: ${result.data.organic_rank?.position || 'Not found'}`);
+    console.log(`Found at local position: ${result.data.local_rank?.position || 'Not found'}`);
+  }
+}
+
+// Check multiple keywords
+async function checkMultipleKeywords() {
+  const response = await fetch('https://mcp.profullstack.com/seo-ranking/check-multiple', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.VALUESERP_API_KEY,
+    },
+    body: JSON.stringify({
+      keywords: ['software agency', 'web development', 'full stack development'],
+      domain: 'profullstack.com',
+      batchSize: 3,
+      delay: 1500,
+    }),
+  });
+
+  const result = await response.json();
+
+  if (result.success) {
+    console.log(`Checked ${result.data.summary.total_checked} keywords`);
+    console.log(`Found in ${result.data.summary.found_in_results} results`);
+    console.log(`Average organic rank: ${result.data.summary.average_organic_rank}`);
+  }
+}
+```
+
 ## ValueSERP API
 
 This module uses the ValueSERP API to perform Google search queries. You need to:
