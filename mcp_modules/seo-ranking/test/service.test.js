@@ -41,14 +41,14 @@ describe('SeoRankingService', () => {
       expect(result.errors).to.include('API key is required');
     });
 
-    it('should reject missing keyword and keywords', () => {
+    it('should reject missing keyword, keywords, and query', () => {
       const result = service.validateSearchParams({
         api_key: 'test-key',
         domain: 'example.com',
       });
 
       expect(result.valid).to.be.false;
-      expect(result.errors).to.include('Either keyword or keywords array is required');
+      expect(result.errors).to.include('Either keyword, keywords array, or query is required');
     });
 
     it('should reject missing domain', () => {

@@ -98,6 +98,51 @@ export async function checkMultipleKeywords(c) {
 }
 
 /**
+ * Search Google Places for businesses
+ * @param {import('hono').Context} c - Hono context
+ */
+export async function searchPlaces(c) {
+  try {
+    const body = await c.req.json();
+    const { api_key, query, domain, ...options } = body;
+
+    // Check for API key in header or body
+    const apiKey = c.req.header('x-api-key') || api_key;
+
+    const validation = seoRankingService.validateSearchParams({
+      api_key: apiKey,
+      query,
+      domain,
+    });
+
+    if (!validation.valid) {
+      return c.json(
+        {
+          error: 'Validation failed',
+          details: validation.errors,
+        },
+        400
+      );
+    }
+
+    const result = await seoRankingService.searchPlaces(apiKey, query, domain, options);
+
+    return c.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    logger.error('Error in searchPlaces:', error);
+    return c.json(
+      {
+        error: error.message,
+      },
+      500
+    );
+  }
+}
+
+/**
  * Get ranking history (placeholder for future implementation)
  * @param {import('hono').Context} c - Hono context
  */

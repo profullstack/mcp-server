@@ -10,6 +10,7 @@ import { logger } from '../../src/utils/logger.js';
 import {
   checkKeywordRanking,
   checkMultipleKeywords,
+  searchPlaces,
   getRankingHistory,
   getModuleStatus,
   validateApiKey,
@@ -29,6 +30,7 @@ export async function register(app) {
   // Register ranking check routes
   app.post('/seo-ranking/check', checkKeywordRanking);
   app.post('/seo-ranking/check-multiple', checkMultipleKeywords);
+  app.post('/seo-ranking/places', searchPlaces);
   app.get('/seo-ranking/history/:domain', getRankingHistory);
   app.post('/seo-ranking/validate-key', validateApiKey);
 
@@ -40,9 +42,9 @@ export async function register(app) {
       parameters: {
         action: {
           type: 'string',
-          description: 'The action to perform (check, check-multiple, validate-key)',
+          description: 'The action to perform (check, check-multiple, places, validate-key)',
           required: true,
-          enum: ['check', 'check-multiple', 'validate-key'],
+          enum: ['check', 'check-multiple', 'places', 'validate-key'],
         },
         api_key: {
           type: 'string',
@@ -62,6 +64,11 @@ export async function register(app) {
             type: 'string',
           },
           maxItems: 50,
+        },
+        query: {
+          type: 'string',
+          description: 'Search query for places search',
+          required: false,
         },
         domain: {
           type: 'string',
@@ -181,6 +188,23 @@ export async function register(app) {
           );
           break;
 
+        case 'places':
+          if (!params.query) {
+            return c.json({ error: 'Missing required parameter: query' }, 400);
+          }
+          if (!params.domain) {
+            return c.json({ error: 'Missing required parameter: domain' }, 400);
+          }
+
+          result = await seoRankingService.searchPlaces(apiKey, params.query, params.domain, {
+            location: params.location,
+            gl: params.gl,
+            hl: params.hl,
+            google_domain: params.google_domain,
+            num: params.num,
+          });
+          break;
+
         case 'validate-key':
           // Test the API key with a simple search
           result = await seoRankingService.checkKeywordRanking(apiKey, 'test', 'example.com', {
@@ -261,6 +285,11 @@ export const metadata = {
       description: 'Check rankings for multiple keywords',
     },
     {
+      path: '/seo-ranking/places',
+      method: 'POST',
+      description: 'Search Google Places for businesses',
+    },
+    {
       path: '/seo-ranking/history/:domain',
       method: 'GET',
       description: 'Get ranking history for a domain',
@@ -275,6 +304,7 @@ export const metadata = {
   features: [
     'Single keyword ranking check',
     'Multiple keywords ranking check (up to 50)',
+    'Google Places search',
     'Organic search results ranking',
     'Local search results ranking',
     'Batch processing with rate limiting',

@@ -207,6 +207,91 @@ export class SeoRankingService {
   }
 
   /**
+   * Search Google Places for businesses
+   * @param {string} apiKey - ValueSERP API key
+   * @param {string} query - Search query
+   * @param {string} domain - Domain to find in results
+   * @param {Object} options - Additional search options
+   * @returns {Promise<Object>} Places search result
+   */
+  async searchPlaces(apiKey, query, domain, options = {}) {
+    if (!apiKey) {
+      throw new Error('API key is required');
+    }
+    if (!query) {
+      throw new Error('Query is required');
+    }
+    if (!domain) {
+      throw new Error('Domain is required');
+    }
+
+    const searchParams = new URLSearchParams({
+      api_key: apiKey,
+      search_type: 'places',
+      q: query,
+      location: options.location || 'San Francisco-Oakland-San Jose,CA,California,United States',
+      gl: options.gl || 'us',
+      hl: options.hl || 'en',
+      google_domain: options.google_domain || 'google.com',
+      num: options.num || '20',
+    });
+
+    try {
+      logger.info(`Searching Google Places for: ${query}, domain: ${domain}`);
+
+      const response = await fetch(`${this.baseUrl}?${searchParams}`);
+
+      if (!response.ok) {
+        throw new Error(`ValueSERP API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Check places results
+      const placesRank = this.findDomainInPlacesResults(data.places_results || [], domain);
+
+      return {
+        query,
+        domain,
+        places_rank: placesRank,
+        total_results: data.places_results?.length || 0,
+        search_time: data.search_information?.time_taken_displayed || 0,
+        timestamp: new Date().toISOString(),
+        found: placesRank !== null,
+      };
+    } catch (error) {
+      logger.error(`Error searching Places for ${query}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find domain in Google Places results
+   * @param {Array} results - Places search results
+   * @param {string} domain - Domain to find
+   * @returns {Object|null} Places ranking information or null if not found
+   */
+  findDomainInPlacesResults(results, domain) {
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      if (result.website && result.website.includes(domain)) {
+        return {
+          position: i + 1,
+          title: result.title,
+          website: result.website,
+          address: result.address,
+          phone: result.phone,
+          rating: result.rating,
+          reviews: result.reviews,
+          place_id: result.place_id,
+          types: result.types,
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
    * Validate search parameters
    * @param {Object} params - Search parameters
    * @returns {Object} Validation result
@@ -218,8 +303,8 @@ export class SeoRankingService {
       errors.push('API key is required');
     }
 
-    if (!params.keyword && !params.keywords) {
-      errors.push('Either keyword or keywords array is required');
+    if (!params.keyword && !params.keywords && !params.query) {
+      errors.push('Either keyword, keywords array, or query is required');
     }
 
     if (!params.domain) {
