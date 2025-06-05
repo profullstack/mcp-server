@@ -16,6 +16,7 @@ describe('SEO Ranking Controller', () => {
       req: {
         json: sinon.stub(),
         param: sinon.stub(),
+        header: sinon.stub(),
       },
       json: sinon.stub().returnsThis(),
     };
@@ -256,7 +257,7 @@ describe('SEO Ranking Controller', () => {
       expect(
         mockContext.json.calledWith(
           {
-            error: 'API key is required',
+            error: 'API key is required (provide via x-api-key header or api_key in body)',
           },
           400
         )

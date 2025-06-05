@@ -125,6 +125,10 @@ Check rankings for multiple keywords.
 
 Validate your ValueSERP API key.
 
+**Headers:**
+
+- `x-api-key` (optional): ValueSERP API key (alternative to api_key in body)
+
 **Request Body:**
 
 ```json

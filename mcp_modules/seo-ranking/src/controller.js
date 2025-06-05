@@ -16,8 +16,11 @@ export async function checkKeywordRanking(c) {
     const body = await c.req.json();
     const { api_key, keyword, domain, ...options } = body;
 
+    // Check for API key in header or body
+    const apiKey = c.req.header('x-api-key') || api_key;
+
     const validation = seoRankingService.validateSearchParams({
-      api_key,
+      api_key: apiKey,
       keyword,
       domain,
     });
@@ -32,7 +35,7 @@ export async function checkKeywordRanking(c) {
       );
     }
 
-    const result = await seoRankingService.checkKeywordRanking(api_key, keyword, domain, options);
+    const result = await seoRankingService.checkKeywordRanking(apiKey, keyword, domain, options);
 
     return c.json({
       success: true,
@@ -58,8 +61,11 @@ export async function checkMultipleKeywords(c) {
     const body = await c.req.json();
     const { api_key, keywords, domain, ...options } = body;
 
+    // Check for API key in header or body
+    const apiKey = c.req.header('x-api-key') || api_key;
+
     const validation = seoRankingService.validateSearchParams({
-      api_key,
+      api_key: apiKey,
       keywords,
       domain,
     });
@@ -74,12 +80,7 @@ export async function checkMultipleKeywords(c) {
       );
     }
 
-    const result = await seoRankingService.checkMultipleKeywords(
-      api_key,
-      keywords,
-      domain,
-      options
-    );
+    const result = await seoRankingService.checkMultipleKeywords(apiKey, keywords, domain, options);
 
     return c.json({
       success: true,
@@ -179,10 +180,13 @@ export async function validateApiKey(c) {
     const body = await c.req.json();
     const { api_key } = body;
 
-    if (!api_key) {
+    // Check for API key in header or body
+    const apiKey = c.req.header('x-api-key') || api_key;
+
+    if (!apiKey) {
       return c.json(
         {
-          error: 'API key is required',
+          error: 'API key is required (provide via x-api-key header or api_key in body)',
         },
         400
       );
@@ -190,7 +194,7 @@ export async function validateApiKey(c) {
 
     // Test the API key with a simple search
     await seoRankingService.checkKeywordRanking(
-      api_key,
+      apiKey,
       'test',
       'example.com',
       { num: '10' } // Limit to 10 results for testing

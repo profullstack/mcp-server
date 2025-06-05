@@ -117,8 +117,17 @@ export async function register(app) {
         return c.json({ error: 'Missing required parameter: action' }, 400);
       }
 
-      if (!params.api_key) {
-        return c.json({ error: 'Missing required parameter: api_key' }, 400);
+      // Check for API key in header or body
+      const apiKey = c.req.header('x-api-key') || params.api_key;
+
+      if (!apiKey) {
+        return c.json(
+          {
+            error:
+              'Missing required parameter: api_key (provide via x-api-key header or api_key in body)',
+          },
+          400
+        );
       }
 
       let result;
@@ -133,7 +142,7 @@ export async function register(app) {
           }
 
           result = await seoRankingService.checkKeywordRanking(
-            params.api_key,
+            apiKey,
             params.keyword,
             params.domain,
             {
@@ -156,7 +165,7 @@ export async function register(app) {
           }
 
           result = await seoRankingService.checkMultipleKeywords(
-            params.api_key,
+            apiKey,
             params.keywords,
             params.domain,
             {
@@ -174,12 +183,9 @@ export async function register(app) {
 
         case 'validate-key':
           // Test the API key with a simple search
-          result = await seoRankingService.checkKeywordRanking(
-            params.api_key,
-            'test',
-            'example.com',
-            { num: '10' }
-          );
+          result = await seoRankingService.checkKeywordRanking(apiKey, 'test', 'example.com', {
+            num: '10',
+          });
           result = {
             api_key_valid: true,
             test_completed: true,
