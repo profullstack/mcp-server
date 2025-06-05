@@ -129,6 +129,8 @@ export async function scanTarget(c) {
       scanId: scanResult.id,
       summary: scanResult.summary,
       scan: scanResult,
+      findings: scanResult.findings || [],
+      ...(scanResult.error && { error: scanResult.error }),
     });
   } catch (error) {
     return c.json(
