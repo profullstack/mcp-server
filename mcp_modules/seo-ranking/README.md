@@ -6,6 +6,7 @@ This MCP module provides SEO ranking checking functionality using the ValueSERP 
 
 - ✅ Single keyword ranking check
 - ✅ Multiple keywords ranking check (up to 50 keywords)
+- ✅ Google Places search
 - ✅ Organic search results ranking
 - ✅ Local search results ranking
 - ✅ Batch processing with rate limiting
@@ -121,6 +122,67 @@ Check rankings for multiple keywords.
 }
 ```
 
+### POST `/seo-ranking/places`
+
+Search Google Places for businesses.
+
+**Headers:**
+
+- `x-api-key` (optional): ValueSERP API key (alternative to api_key in body)
+
+**Request Body:**
+
+```json
+{
+  "api_key": "your_valueserp_api_key",
+  "query": "software company",
+  "domain": "profullstack.com",
+  "location": "San Francisco-Oakland-San Jose,CA,California,United States",
+  "gl": "us",
+  "hl": "en",
+  "google_domain": "google.com",
+  "num": "20"
+}
+```
+
+**Parameters:**
+
+- `api_key` (required*): ValueSERP API key (*can be provided via x-api-key header instead)
+- `query` (required): Search query for places
+- `domain` (required): Domain to find in results
+- `location` (optional): Search location (default: "San Francisco-Oakland-San Jose,CA,California,United States")
+- `gl` (optional): Google country code (default: "us")
+- `hl` (optional): Google language code (default: "en")
+- `google_domain` (optional): Google domain (default: "google.com")
+- `num` (optional): Number of results to return (default: "20")
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "query": "software company",
+    "domain": "profullstack.com",
+    "places_rank": {
+      "position": 3,
+      "title": "ProFullStack Software Development",
+      "website": "https://profullstack.com",
+      "address": "San Francisco, CA",
+      "phone": "555-0123",
+      "rating": 4.8,
+      "reviews": 25,
+      "place_id": "ChIJd8BlQ2BZwokRAFQEcDlJRAQ",
+      "types": ["establishment", "point_of_interest"]
+    },
+    "total_results": 20,
+    "search_time": 0.32,
+    "timestamp": "2025-01-04T20:15:30.123Z",
+    "found": true
+  }
+}
+```
+
 ### POST `/seo-ranking/validate-key`
 
 Validate your ValueSERP API key.
@@ -150,10 +212,12 @@ The module provides an MCP tool called `seo-ranking` that can be used through th
 - `action` (required): The action to perform
   - `"check"` - Check single keyword
   - `"check-multiple"` - Check multiple keywords
+  - `"places"` - Search Google Places
   - `"validate-key"` - Validate API key
 - `api_key` (required): Your ValueSERP API key
 - `keyword` (required for "check"): Single keyword to check
 - `keywords` (required for "check-multiple"): Array of keywords (max 50)
+- `query` (required for "places"): Search query for places
 - `domain` (required): Domain to find in search results
 - `location` (optional): Search location (default: "98146,Washington,United States")
 - `gl` (optional): Google country code (default: "us")
@@ -184,6 +248,17 @@ The module provides an MCP tool called `seo-ranking` that can be used through th
   "domain": "profullstack.com",
   "batchSize": 3,
   "delay": 1500
+}
+```
+
+```json
+{
+  "action": "places",
+  "api_key": "your_valueserp_api_key",
+  "query": "software company",
+  "domain": "profullstack.com",
+  "location": "San Francisco-Oakland-San Jose,CA,California,United States",
+  "num": "20"
 }
 ```
 
@@ -241,6 +316,21 @@ curl -X POST https://mcp.profullstack.com/seo-ranking/check-multiple \
     "domain": "profullstack.com",
     "batchSize": 2,
     "delay": 2000
+  }'
+```
+
+### Search Google Places
+
+```bash
+curl -X POST https://mcp.profullstack.com/seo-ranking/places \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: your_valueserp_api_key" \
+  -d '{
+    "api_key": "your_valueserp_api_key",
+    "query": "software company",
+    "domain": "profullstack.com",
+    "location": "San Francisco-Oakland-San Jose,CA,California,United States",
+    "num": "20"
   }'
 ```
 
