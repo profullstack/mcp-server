@@ -64,10 +64,10 @@ const result = await useScannerModule({
 
 See the [examples](examples/) directory for complete usage examples.
 
-Basic example:
+### Fetch Examples
 
 ```javascript
-// Perform a security scan
+// Perform a security scan with nuclei
 const scanResponse = await fetch('http://localhost:3000/scanner/scan', {
   method: 'POST',
   headers: {
@@ -80,10 +80,140 @@ const scanResponse = await fetch('http://localhost:3000/scanner/scan', {
     timeout: 300,
   }),
 });
+const scanResult = await scanResponse.json();
+console.log('Scan ID:', scanResult.scanId);
 
 // Get scan history
 const historyResponse = await fetch('http://localhost:3000/scanner/scans?limit=10');
 const history = await historyResponse.json();
+console.log('Recent scans:', history.scans);
+
+// Get specific scan details
+const scanId = 'scan-1621234567890';
+const scanDetailsResponse = await fetch(`http://localhost:3000/scanner/scans/${scanId}`);
+const scanDetails = await scanDetailsResponse.json();
+console.log('Scan details:', scanDetails.scan);
+
+// Generate a report
+const reportResponse = await fetch(`http://localhost:3000/scanner/reports/${scanId}?format=json`);
+const report = await reportResponse.json();
+
+// Use MCP tool endpoint
+const mcpToolResponse = await fetch('http://localhost:3000/tools/scanner', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    action: 'scan',
+    target: 'https://example.com',
+    tools: ['nuclei'],
+    verbose: true,
+    timeout: 300,
+  }),
+});
+const mcpResult = await mcpToolResponse.json();
+```
+
+### cURL Examples
+
+```bash
+# Perform a security scan with nuclei
+curl -X POST http://localhost:3000/scanner/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target": "https://example.com",
+    "tools": ["nuclei"],
+    "verbose": true,
+    "timeout": 300
+  }'
+
+# Perform a comprehensive scan with multiple tools
+curl -X POST http://localhost:3000/scanner/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target": "https://example.com",
+    "tools": ["nikto", "wapiti", "nuclei"],
+    "verbose": true,
+    "timeout": 600,
+    "toolOptions": {
+      "nikto": {
+        "tuning": "x"
+      },
+      "nuclei": {
+        "severity": "medium,high,critical"
+      }
+    }
+  }'
+
+# Get scan history
+curl http://localhost:3000/scanner/scans?limit=5
+
+# Get specific scan details
+curl http://localhost:3000/scanner/scans/scan-1621234567890
+
+# Get scan statistics
+curl http://localhost:3000/scanner/stats
+
+# Generate HTML report
+curl "http://localhost:3000/scanner/reports/scan-1621234567890?format=html"
+
+# Export report to file
+curl "http://localhost:3000/scanner/reports/scan-1621234567890/export?format=json&destination=/tmp/scan-report.json"
+
+# Use MCP tool endpoint
+curl -X POST http://localhost:3000/tools/scanner \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "scan",
+    "target": "https://example.com",
+    "tools": ["nuclei"],
+    "verbose": true
+  }'
+
+# Get scan history via MCP tool
+curl -X POST http://localhost:3000/tools/scanner \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "history",
+    "limit": 10
+  }'
+
+# Get scan statistics via MCP tool
+curl -X POST http://localhost:3000/tools/scanner \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "stats"
+  }'
+```
+
+### Nuclei-Specific Examples
+
+```bash
+# Scan with nuclei only
+curl -X POST http://localhost:3000/scanner/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target": "https://example.com",
+    "tools": ["nuclei"],
+    "verbose": true,
+    "timeout": 300
+  }'
+
+# Nuclei scan with custom severity filter
+curl -X POST http://localhost:3000/scanner/scan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target": "https://example.com",
+    "tools": ["nuclei"],
+    "toolOptions": {
+      "nuclei": {
+        "severity": "high,critical",
+        "tags": "cve,rce"
+      }
+    },
+    "timeout": 600
+  }'
 ```
 
 ## Testing
