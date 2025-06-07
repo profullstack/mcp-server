@@ -510,7 +510,7 @@ export class BacklinksService {
           results.title = 'filled';
           break;
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
@@ -524,7 +524,7 @@ export class BacklinksService {
           results.description = 'filled';
           break;
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
@@ -538,7 +538,7 @@ export class BacklinksService {
           results.url = 'filled';
           break;
         }
-      } catch (error) {
+      } catch {
         continue;
       }
     }
@@ -553,7 +553,7 @@ export class BacklinksService {
             results.email = 'filled';
             break;
           }
-        } catch (error) {
+        } catch {
           continue;
         }
       }

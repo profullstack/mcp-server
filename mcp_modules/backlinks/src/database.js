@@ -1,15 +1,15 @@
 /**
- * SQLite3 Database Layer for Backlinks Module
+ * Better-SQLite3 Database Layer for Backlinks Module
  *
  * Provides persistent storage for campaigns, submissions, and discovered sites.
  */
 
-import sqlite3 from 'sqlite3';
+import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
 /**
- * Database wrapper class with async/await support
+ * Database wrapper class with better-sqlite3
  */
 export class BacklinksDatabase {
   constructor(dbPath = './data/backlinks.db') {
@@ -27,16 +27,9 @@ export class BacklinksDatabase {
    * Initialize database connection and create tables
    */
   async init() {
-    return new Promise((resolve, reject) => {
-      this.db = new sqlite3.Database(this.dbPath, err => {
-        if (err) {
-          reject(err);
-        } else {
-          console.log(`Connected to SQLite database: ${this.dbPath}`);
-          this.createTables().then(resolve).catch(reject);
-        }
-      });
-    });
+    this.db = new Database(this.dbPath);
+    console.log(`Connected to SQLite database: ${this.dbPath}`);
+    await this.createTables();
   }
 
   /**
@@ -93,7 +86,7 @@ export class BacklinksDatabase {
     ];
 
     for (const tableSQL of tables) {
-      await this.run(tableSQL);
+      this.db.exec(tableSQL);
     }
 
     // Create indexes for better performance
@@ -106,53 +99,33 @@ export class BacklinksDatabase {
     ];
 
     for (const indexSQL of indexes) {
-      await this.run(indexSQL);
+      this.db.exec(indexSQL);
     }
   }
 
   /**
-   * Promisified database run method
+   * Database run method (synchronous with better-sqlite3)
    */
   run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function (err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ lastID: this.lastID, changes: this.changes });
-        }
-      });
-    });
+    const stmt = this.db.prepare(sql);
+    const result = stmt.run(params);
+    return { lastID: result.lastInsertRowid, changes: result.changes };
   }
 
   /**
-   * Promisified database get method
+   * Database get method (synchronous with better-sqlite3)
    */
   get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
+    const stmt = this.db.prepare(sql);
+    return stmt.get(params);
   }
 
   /**
-   * Promisified database all method
+   * Database all method (synchronous with better-sqlite3)
    */
   all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
+    const stmt = this.db.prepare(sql);
+    return stmt.all(params);
   }
 
   // Campaign operations
@@ -178,7 +151,7 @@ export class BacklinksDatabase {
       JSON.stringify(campaign.settings || {}),
     ];
 
-    return await this.run(sql, params);
+    return this.run(sql, params);
   }
 
   /**
@@ -186,7 +159,7 @@ export class BacklinksDatabase {
    */
   async getCampaign(campaignId) {
     const sql = 'SELECT * FROM campaigns WHERE id = ?';
-    const row = await this.get(sql, [campaignId]);
+    const row = this.get(sql, [campaignId]);
 
     if (!row) return null;
 
@@ -198,7 +171,7 @@ export class BacklinksDatabase {
    */
   async getAllCampaigns() {
     const sql = 'SELECT * FROM campaigns ORDER BY created_at DESC';
-    const rows = await this.all(sql);
+    const rows = this.all(sql);
 
     return rows.map(row => this.parseCampaignRow(row));
   }
@@ -208,7 +181,7 @@ export class BacklinksDatabase {
    */
   async deleteCampaign(campaignId) {
     const sql = 'DELETE FROM campaigns WHERE id = ?';
-    return await this.run(sql, [campaignId]);
+    return this.run(sql, [campaignId]);
   }
 
   /**
@@ -256,7 +229,7 @@ export class BacklinksDatabase {
       submission.followUpAt || null,
     ];
 
-    return await this.run(sql, params);
+    return this.run(sql, params);
   }
 
   /**
@@ -264,7 +237,7 @@ export class BacklinksDatabase {
    */
   async getSubmission(submissionId) {
     const sql = 'SELECT * FROM submissions WHERE id = ?';
-    const row = await this.get(sql, [submissionId]);
+    const row = this.get(sql, [submissionId]);
 
     if (!row) return null;
 
@@ -276,7 +249,7 @@ export class BacklinksDatabase {
    */
   async getCampaignSubmissions(campaignId) {
     const sql = 'SELECT * FROM submissions WHERE campaign_id = ? ORDER BY created_at DESC';
-    const rows = await this.all(sql, [campaignId]);
+    const rows = this.all(sql, [campaignId]);
 
     return rows.map(row => this.parseSubmissionRow(row));
   }
@@ -286,7 +259,7 @@ export class BacklinksDatabase {
    */
   async getAllSubmissions() {
     const sql = 'SELECT * FROM submissions ORDER BY created_at DESC';
-    const rows = await this.all(sql);
+    const rows = this.all(sql);
 
     return rows.map(row => this.parseSubmissionRow(row));
   }
@@ -318,7 +291,7 @@ export class BacklinksDatabase {
    * Save discovered site
    */
   async saveDiscoveredSite(site) {
-    const sql = `INSERT OR REPLACE INTO discovered_sites
+    const sql = `INSERT OR REPLACE INTO discovered_sites 
       (url, title, description, score, eligible, site_type, discovered_at, source, query, site_info)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
@@ -335,7 +308,7 @@ export class BacklinksDatabase {
       JSON.stringify(site.siteInfo || {}),
     ];
 
-    return await this.run(sql, params);
+    return this.run(sql, params);
   }
 
   /**
@@ -343,7 +316,7 @@ export class BacklinksDatabase {
    */
   async getDiscoveredSite(url) {
     const sql = 'SELECT * FROM discovered_sites WHERE url = ?';
-    const row = await this.get(sql, [url]);
+    const row = this.get(sql, [url]);
 
     if (!row) return null;
 
@@ -355,7 +328,7 @@ export class BacklinksDatabase {
    */
   async getTopDiscoveredSites(limit = 50) {
     const sql = 'SELECT * FROM discovered_sites WHERE eligible = 1 ORDER BY score DESC LIMIT ?';
-    const rows = await this.all(sql, [limit]);
+    const rows = this.all(sql, [limit]);
 
     return rows.map(row => this.parseDiscoveredSiteRow(row));
   }
@@ -383,9 +356,9 @@ export class BacklinksDatabase {
    * Get database statistics
    */
   async getStats() {
-    const campaignCount = await this.get('SELECT COUNT(*) as count FROM campaigns');
-    const submissionCount = await this.get('SELECT COUNT(*) as count FROM submissions');
-    const siteCount = await this.get('SELECT COUNT(*) as count FROM discovered_sites');
+    const campaignCount = this.get('SELECT COUNT(*) as count FROM campaigns');
+    const submissionCount = this.get('SELECT COUNT(*) as count FROM submissions');
+    const siteCount = this.get('SELECT COUNT(*) as count FROM discovered_sites');
 
     return {
       campaigns: campaignCount.count,
@@ -398,21 +371,11 @@ export class BacklinksDatabase {
    * Close database connection
    */
   async close() {
-    return new Promise(resolve => {
-      if (this.db && this.db.open) {
-        this.db.close(err => {
-          if (err) {
-            console.error('Error closing database:', err);
-          } else {
-            console.log('Database connection closed');
-          }
-          this.db = null;
-          resolve();
-        });
-      } else {
-        resolve();
-      }
-    });
+    if (this.db && this.db.open) {
+      this.db.close();
+      console.log('Database connection closed');
+      this.db = null;
+    }
   }
 }
 
