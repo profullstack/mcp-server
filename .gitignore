@@ -80,6 +80,7 @@ lib-cov/
 .DS_Store
 Thumbs.db
 desktop.ini
+data/
 
 # Temporary files
 *.tmp
