@@ -116,9 +116,12 @@ debug/
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-mcp_modules/calculator/pnpm-lock.yaml
-mcp_modules/news-aggregator/pnpm-lock.yaml
-mcp_modules/template/pnpm-lock.yaml
-mcp_modules/test-module/pnpm-lock.yaml
-mcp_modules/news-aggregator/pnpm-lock.yaml
-mcp_modules/news-aggregator/pnpm-lock.yaml
+# MCP modules dependencies and build artifacts
+mcp_modules/*/node_modules/
+mcp_modules/*/pnpm-lock.yaml
+mcp_modules/*/package-lock.json
+mcp_modules/*/yarn.lock
+mcp_modules/*/dist/
+mcp_modules/*/build/
+mcp_modules/*/.nyc_output/
+mcp_modules/*/coverage/
