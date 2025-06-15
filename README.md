@@ -2,6 +2,8 @@
 
 A generic, modular server for implementing the Model Context Protocol (MCP). This server provides a framework for controlling and interacting with various models through a standardized API.
 
+[![Crypto Payment](https://paybadge.profullstack.com/badge.svg)](https://paybadge.profullstack.com/?tickers=btc%2Ceth%2Csol%2Cusdc)
+
 ## Features
 
 - Modular architecture for easy extension
@@ -513,8 +515,6 @@ const response = await fetch('http://localhost:3000/model/custom-model-name/infe
 - [MCP Standard Methods](docs/mcp_standard_methods.md): Documentation of the standard methods that all MCP servers should implement.
 - [MCP Interface](docs/mcp_interface.ts): TypeScript interface definitions for the MCP protocol.
 - [Architecture](docs/architecture.md): Overview of the MCP server architecture.
-
-[![Crypto Payment](https://paybadge.profullstack.com/badge.svg)](https://paybadge.profullstack.com/?tickers=btc%2Ceth%2Csol%2Cusdc)
 
 ## License
 
