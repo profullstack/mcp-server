@@ -514,6 +514,8 @@ const response = await fetch('http://localhost:3000/model/custom-model-name/infe
 - [MCP Interface](docs/mcp_interface.ts): TypeScript interface definitions for the MCP protocol.
 - [Architecture](docs/architecture.md): Overview of the MCP server architecture.
 
+[![Crypto Payment](https://paybadge.profullstack.com/badge.svg)](https://paybadge.profullstack.com/?tickers=btc%2Ceth%2Csol%2Cusdc)
+
 ## License
 
 ISC
