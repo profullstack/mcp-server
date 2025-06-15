@@ -1,0 +1,10 @@
+This is a placeholder file for the assets directory.
+
+The assets directory can contain:
+- Images
+- Icons
+- Logos
+- CSS files
+- Other static assets
+
+These assets can be used by the module for UI components, documentation, or other purposes.

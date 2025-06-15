@@ -15,5 +15,16 @@
     "semi": ["error", "always"],
     "no-unused-vars": ["warn"],
     "no-console": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/test/**/*.js", "**/*.test.js", "**/test*.js"],
+      "env": {
+        "mocha": true
+      },
+      "rules": {
+        "no-unused-expressions": "off"
+      }
+    }
+  ]
 }

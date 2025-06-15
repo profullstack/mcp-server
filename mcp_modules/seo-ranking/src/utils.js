@@ -118,10 +118,9 @@ export function formatPosition(position) {
 /**
  * Calculate ranking score (higher is better)
  * @param {number|null} position - Ranking position
- * @param {number} _totalResults - Total number of results (unused but kept for API compatibility)
  * @returns {number} Score from 0-100
  */
-export function calculateRankingScore(position, _totalResults = 100) {
+export function calculateRankingScore(position) {
   if (position === null || position === undefined) {
     return 0;
   }
@@ -160,7 +159,7 @@ export function generateRankingInsights(result) {
 
   if (result.local_rank) {
     const position = result.local_rank.position;
-    const score = calculateRankingScore(position, 20); // Local results usually have fewer items
+    const score = calculateRankingScore(position); // Local results usually have fewer items
 
     insights.insights.push({
       type: 'local',

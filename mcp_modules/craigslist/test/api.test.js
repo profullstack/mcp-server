@@ -7,8 +7,6 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 
-/* global describe, beforeEach, afterEach, it */
-
 describe('Craigslist API', () => {
   // Sinon sandbox for managing stubs
   let sandbox;

@@ -1,0 +1,35 @@
+{
+  "name": "mcp-module-domain-lookup",
+  "version": "1.0.0",
+  "description": "Domain availability checker and brainstorming tool using tldx CLI",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js",
+    "lint": "eslint src/ test/ --ext .js",
+    "lint:fix": "eslint src/ test/ --ext .js --fix"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "domain",
+    "availability",
+    "tldx",
+    "dns",
+    "brainstorming",
+    "domain-names"
+  ],
+  "author": "MCP Server",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "chai": "^4.3.7",
+    "eslint": "^9.28.0",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3"
+  }
+}
