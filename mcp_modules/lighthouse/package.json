@@ -5,7 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "mocha test/**/*.test.js"
+    "test": "mocha test/**/*.test.js",
+    "lint": "eslint src/ test/ --ext .js",
+    "lint:fix": "eslint src/ test/ --ext .js --fix"
   },
   "keywords": [
     "mcp",
@@ -25,7 +27,9 @@
     "chrome-launcher": "^1.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.28.0",
     "chai": "^4.3.7",
+    "eslint": "^9.28.0",
     "mocha": "^10.2.0",
     "sinon": "^15.0.3"
   }
