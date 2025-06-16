@@ -424,4 +424,4 @@ tldx uses RDAP for domain checking, which may have rate limits. Use the `--verbo
 
 ## License
 
-ISC License - see LICENSE file for details.
+Apache 2.0 License - see LICENSE file for details.

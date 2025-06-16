@@ -20,7 +20,7 @@
     "domain-names"
   ],
   "author": "MCP Server",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=20.0.0"
   },
