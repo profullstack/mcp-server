@@ -1,0 +1,36 @@
+{
+  "name": "mcp-module-email-checker",
+  "version": "1.0.0",
+  "description": "An MCP server module for checking email validity using the un.limited.mx API",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js",
+    "test:watch": "mocha test/**/*.test.js --watch",
+    "lint": "eslint src/ test/ index.js",
+    "lint:fix": "eslint src/ test/ index.js --fix",
+    "format": "prettier --write src/ test/ index.js"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "email",
+    "validation",
+    "checker",
+    "api"
+  ],
+  "author": "RooCode",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.0.3",
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  }
+}
