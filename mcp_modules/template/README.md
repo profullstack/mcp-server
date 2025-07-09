@@ -49,7 +49,7 @@ For detailed API documentation, see [docs/api.md](docs/api.md).
 
 This module provides an MCP tool that can be used by other modules:
 
-```javascript
+````javascript
 // Example of using the template tool in another module
 const result = await useTemplateModule({
   action: 'create',
@@ -59,7 +59,98 @@ const result = await useTemplateModule({
     value: 100,
   },
 });
+
+## Testing Setup
+
+This template includes a complete testing setup with Mocha, Chai, and Sinon:
+
+### Running Tests
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run all tests
+pnpm test
+
+# Run tests in watch mode
+pnpm run test:watch
+
+# Run with verbose output
+TEST_VERBOSE=1 pnpm test
+````
+
+### Test Structure
+
+- **Mocha**: Test runner with ESM support
+- **Chai**: Assertion library with expect syntax
+- **Sinon**: Mocking and stubbing library
+- **sinon-chai**: Chai assertions for Sinon
+
+### Global Test Utilities
+
+The test setup provides global utilities available in all test files:
+
+```javascript
+// Assertions
+expect(value).to.equal(expected);
+expect(stub).to.have.been.called;
+
+// Mocking
+const stub = sinon.stub(object, 'method');
+const spy = sinon.spy();
+
+// Mock factories
+const mockContext = createMockContext();
+const mockService = createMockService();
 ```
+
+### Test File Examples
+
+**Service Tests** (`test/service.test.js`):
+
+```javascript
+describe('Service Function', () => {
+  it('should return expected result', () => {
+    const result = serviceFunction('input');
+    expect(result).to.equal('expected');
+  });
+});
+```
+
+**Controller Tests** (`test/controller.test.js`):
+
+```javascript
+describe('Controller Endpoint', () => {
+  it('should handle request correctly', async () => {
+    const mockContext = createMockContext();
+    mockContext.req.json.resolves({ data: 'test' });
+
+    await controllerFunction(mockContext);
+
+    expect(mockContext.json).to.have.been.called;
+  });
+});
+```
+
+### Code Quality
+
+```bash
+# Lint code
+pnpm run lint
+
+# Format code
+pnpm run format
+```
+
+### Configuration Files
+
+- `.mocharc.json` - Mocha test configuration
+- `.eslintrc.json` - ESLint rules and settings
+- `.prettierrc` - Code formatting rules
+- `test/setup.js` - Test environment setup
+
+````
 
 ## Usage Examples
 
@@ -84,7 +175,7 @@ const createResponse = await fetch('http://localhost:3000/template/items', {
 // Get all items
 const getAllResponse = await fetch('http://localhost:3000/template/items');
 const items = await getAllResponse.json();
-```
+````
 
 ## Testing
 

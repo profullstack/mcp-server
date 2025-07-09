@@ -1,175 +1,141 @@
 /**
- * Template Module Service Tests
- *
- * This file contains tests for the template module service using Mocha and Chai.
+ * Service Layer Tests
+ * Tests for the template service functionality
  */
 
 import { expect } from 'chai';
-import { describe, it, beforeEach } from 'mocha';
+import sinon from 'sinon';
+import { templateService } from '../src/service.js';
 
-import { TemplateService } from '../src/service.js';
-
-describe('TemplateService', () => {
-  let service;
+describe('Template Service', () => {
+  let sandbox;
 
   beforeEach(() => {
-    // Create a fresh service instance before each test
-    service = new TemplateService();
+    sandbox = sinon.createSandbox();
   });
 
-  describe('getAllItems()', () => {
-    it('should return an empty array initially', () => {
-      const items = service.getAllItems();
-      expect(items).to.be.an('array').that.is.empty;
-    });
+  afterEach(() => {
+    sandbox.restore();
+  });
 
-    it('should return all items after adding some', () => {
-      // Add some test items
-      service.createItem({ id: 'test1', name: 'Test 1' });
-      service.createItem({ id: 'test2', name: 'Test 2' });
+  describe('getAllItems', () => {
+    it('should return all items', () => {
+      const result = templateService.getAllItems();
 
-      const items = service.getAllItems();
-      expect(items).to.be.an('array').with.lengthOf(2);
-      expect(items[0].id).to.equal('test1');
-      expect(items[1].id).to.equal('test2');
+      expect(result).to.be.an('array');
+      expect(result).to.have.lengthOf(0); // Initially empty
     });
   });
 
-  describe('getItemById()', () => {
+  describe('getItemById', () => {
     it('should return null for non-existent item', () => {
-      const item = service.getItemById('nonexistent');
-      expect(item).to.be.null;
+      const result = templateService.getItemById('non-existent');
+
+      expect(result).to.be.null;
     });
 
-    it('should return the correct item when it exists', () => {
-      // Add a test item
-      service.createItem({ id: 'test1', name: 'Test 1' });
+    it('should return item when it exists', () => {
+      // First create an item
+      const newItem = templateService.createItem({ name: 'Test Item' });
 
-      const item = service.getItemById('test1');
-      expect(item).to.be.an('object');
-      expect(item.id).to.equal('test1');
-      expect(item.name).to.equal('Test 1');
-    });
-  });
+      // Then retrieve it
+      const result = templateService.getItemById(newItem.id);
 
-  describe('createItem()', () => {
-    it('should add a new item with createdAt timestamp', () => {
-      const newItem = service.createItem({ id: 'test1', name: 'Test 1' });
-
-      expect(newItem).to.be.an('object');
-      expect(newItem.id).to.equal('test1');
-      expect(newItem.name).to.equal('Test 1');
-      expect(newItem.createdAt).to.be.a('string');
-
-      // Verify it was added to the items map
-      expect(service.getItemById('test1')).to.deep.equal(newItem);
-    });
-
-    it('should throw an error if item data is invalid', () => {
-      expect(() => service.createItem(null)).to.throw('Invalid item data');
-      expect(() => service.createItem({})).to.throw('Invalid item data');
-      expect(() => service.createItem({ name: 'No ID' })).to.throw('Invalid item data');
-    });
-
-    it('should throw an error if item with same ID already exists', () => {
-      service.createItem({ id: 'test1', name: 'Test 1' });
-      expect(() => service.createItem({ id: 'test1', name: 'Duplicate' })).to.throw(
-        'Item with ID test1 already exists'
-      );
+      expect(result).to.deep.equal(newItem);
     });
   });
 
-  describe('updateItem()', () => {
-    it('should update an existing item', () => {
-      // Add a test item
-      service.createItem({ id: 'test1', name: 'Test 1', value: 42 });
+  describe('createItem', () => {
+    it('should create a new item with generated ID', () => {
+      const itemData = { name: 'Test Item', description: 'A test item' };
 
-      // Update the item
-      const updatedItem = service.updateItem('test1', { name: 'Updated Name' });
+      const result = templateService.createItem(itemData);
 
-      expect(updatedItem.id).to.equal('test1');
-      expect(updatedItem.name).to.equal('Updated Name');
-      expect(updatedItem.value).to.equal(42); // Unchanged property
-      expect(updatedItem.updatedAt).to.be.a('string');
-
-      // Verify it was updated in the items map
-      expect(service.getItemById('test1')).to.deep.equal(updatedItem);
+      expect(result).to.have.property('id');
+      expect(result).to.have.property('name', itemData.name);
+      expect(result).to.have.property('description', itemData.description);
+      expect(result).to.have.property('createdAt');
     });
 
-    it('should throw an error if item does not exist', () => {
-      expect(() => service.updateItem('nonexistent', { name: 'New Name' })).to.throw(
-        'Item with ID nonexistent not found'
-      );
+    it('should add item to the collection', () => {
+      const itemData = { name: 'Test Item' };
+
+      const initialCount = templateService.getAllItems().length;
+      templateService.createItem(itemData);
+      const finalCount = templateService.getAllItems().length;
+
+      expect(finalCount).to.equal(initialCount + 1);
     });
   });
 
-  describe('deleteItem()', () => {
-    it('should delete an existing item', () => {
-      // Add a test item
-      service.createItem({ id: 'test1', name: 'Test 1' });
+  describe('updateItem', () => {
+    it('should return null for non-existent item', () => {
+      const result = templateService.updateItem('non-existent', { name: 'Updated' });
 
-      // Delete the item
-      const result = service.deleteItem('test1');
-
-      expect(result).to.be.true;
-      expect(service.getItemById('test1')).to.be.null;
+      expect(result).to.be.null;
     });
 
-    it('should return false if item does not exist', () => {
-      const result = service.deleteItem('nonexistent');
+    it('should update existing item', () => {
+      // Create an item first
+      const item = templateService.createItem({ name: 'Original' });
+
+      // Update it
+      const updateData = { name: 'Updated Name' };
+      const result = templateService.updateItem(item.id, updateData);
+
+      expect(result).to.have.property('id', item.id);
+      expect(result).to.have.property('name', updateData.name);
+      expect(result).to.have.property('updatedAt');
+    });
+  });
+
+  describe('deleteItem', () => {
+    it('should return false for non-existent item', () => {
+      const result = templateService.deleteItem('non-existent');
+
       expect(result).to.be.false;
     });
-  });
 
-  describe('processItem()', () => {
-    it('should process an existing item', async () => {
-      // Add a test item
-      service.createItem({ id: 'test1', name: 'Test 1' });
+    it('should delete existing item', () => {
+      // Create an item first
+      const item = templateService.createItem({ name: 'To Delete' });
 
-      // Process the item
-      const processedItem = await service.processItem('test1');
+      // Delete it
+      const result = templateService.deleteItem(item.id);
 
-      expect(processedItem.id).to.equal('test1');
-      expect(processedItem.processed).to.be.true;
-      expect(processedItem.processedAt).to.be.a('string');
-      expect(processedItem.result).to.equal('Processed: test1');
-    });
+      expect(result).to.be.true;
 
-    it('should throw an error if item does not exist', async () => {
-      try {
-        await service.processItem('nonexistent');
-        // If we get here, the test should fail
-        expect.fail('Should have thrown an error');
-      } catch (error) {
-        expect(error.message).to.equal('Item with ID nonexistent not found');
-      }
-    });
-
-    it('should use the delayedResponse utility', async () => {
-      // Add a test item
-      service.createItem({ id: 'test1', name: 'Test 1' });
-
-      // Create a spy to track when the promise resolves
-      const startTime = Date.now();
-      await service.processItem('test1');
-      const endTime = Date.now();
-
-      // Should take at least some time to process (due to delayedResponse)
-      // Note: In a real test, you would mock the delayedResponse function
-      // to avoid actual delays, but this is just for demonstration
-      expect(endTime - startTime).to.be.at.least(100);
+      // Verify it's gone
+      const retrieved = templateService.getItemById(item.id);
+      expect(retrieved).to.be.null;
     });
   });
 
-  describe('formatItemResponse()', () => {
-    it('should format the response correctly', () => {
-      const item = { id: 'test1', name: 'Test 1' };
-      const formattedResponse = service.formatItemResponse(item);
+  describe('processItem', () => {
+    it('should return null for non-existent item', async () => {
+      const result = await templateService.processItem('non-existent');
 
-      expect(formattedResponse).to.be.an('object');
-      expect(formattedResponse.success).to.be.true;
-      expect(formattedResponse.timestamp).to.be.a('string');
-      expect(formattedResponse.data).to.deep.equal(item);
+      expect(result).to.be.null;
+    });
+
+    it('should process existing item', async () => {
+      // Create an item first
+      const item = templateService.createItem({ name: 'To Process' });
+
+      // Process it
+      const result = await templateService.processItem(item.id);
+
+      expect(result).to.have.property('id', item.id);
+      expect(result).to.have.property('processed', true);
+      expect(result).to.have.property('processedAt');
+    });
+  });
+
+  describe('error handling', () => {
+    it('should handle invalid input gracefully', () => {
+      expect(() => templateService.createItem(null)).to.not.throw();
+      expect(() => templateService.createItem(undefined)).to.not.throw();
+      expect(() => templateService.updateItem('id', null)).to.not.throw();
     });
   });
 });

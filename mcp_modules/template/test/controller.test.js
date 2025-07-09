@@ -1,326 +1,240 @@
 /**
- * Template Module Controller Tests
- *
- * This file contains tests for the template module controller using Mocha and Chai.
+ * Controller Layer Tests
+ * Tests for MCP endpoints and request handling
  */
 
 import { expect } from 'chai';
-import { describe, it, beforeEach, afterEach } from 'mocha';
 import sinon from 'sinon';
+import {
+  getAllItems,
+  getItemById,
+  createItem,
+  updateItem,
+  deleteItem,
+  processItem,
+} from '../src/controller.js';
 
-// Import the controller functions
-import * as controller from '../src/controller.js';
-import { templateService } from '../src/service.js';
-
-describe('Template Controller', () => {
-  // Mock Hono context
+describe('Controller Functions', () => {
+  let mockService;
   let mockContext;
 
-  // Sinon sandbox for managing stubs
-  let sandbox;
-
   beforeEach(() => {
-    // Create a new sandbox before each test
-    sandbox = sinon.createSandbox();
+    // Mock the service layer
+    mockService = createMockService();
 
-    // Create a mock context object that mimics Hono's context
-    mockContext = {
-      json: sandbox.stub().returnsThis(),
-      req: {
-        param: sandbox.stub().returns({}),
-        json: sandbox.stub().resolves({}),
-      },
-    };
+    // Mock Hono context
+    mockContext = createMockContext();
   });
 
   afterEach(() => {
-    // Restore all stubs after each test
-    sandbox.restore();
+    sinon.restore();
   });
 
-  describe('getAllItems()', () => {
-    it('should return all items with success status', async () => {
-      // Stub the service method
-      const items = [
-        { id: 'test1', name: 'Test 1' },
-        { id: 'test2', name: 'Test 2' },
+  describe('getAllItems', () => {
+    it('should return all items', async () => {
+      const mockItems = [
+        { id: '1', name: 'Item 1' },
+        { id: '2', name: 'Item 2' },
       ];
-      sandbox.stub(templateService, 'getAllItems').returns(items);
 
-      // Call the controller method
-      await controller.getAllItems(mockContext);
+      mockService.getAllItems.returns(mockItems);
 
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: true,
-        count: 2,
-        items,
+      const controller = getAllItems(mockService);
+      await controller(mockContext);
+
+      expect(mockService.getAllItems).to.have.been.called;
+      expect(mockContext.json).to.have.been.calledWith({
+        items: mockItems,
+        count: mockItems.length,
       });
     });
 
-    it('should handle errors and return error response', async () => {
-      // Stub the service method to throw an error
-      const error = new Error('Test error');
-      sandbox.stub(templateService, 'getAllItems').throws(error);
+    it('should handle service errors', async () => {
+      const error = new Error('Service error');
+      mockService.getAllItems.throws(error);
 
-      // Call the controller method
-      await controller.getAllItems(mockContext);
+      const controller = getAllItems(mockService);
+      await controller(mockContext);
 
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: false,
-        error: 'Test error',
-      });
-      expect(mockContext.json.firstCall.args[1]).to.equal(500);
+      expect(mockContext.json).to.have.been.calledWith({ error: 'Service error' }, 500);
     });
   });
 
-  describe('getItemById()', () => {
-    it('should return the item when it exists', async () => {
-      // Set up the request parameter
-      mockContext.req.param.returns({ id: 'test1' });
+  describe('getItemById', () => {
+    it('should return item when found', async () => {
+      const mockItem = { id: '1', name: 'Test Item' };
+      mockContext.req.param = sinon.stub().returns('1');
+      mockService.getItemById.returns(mockItem);
 
-      // Stub the service methods
-      const item = { id: 'test1', name: 'Test 1' };
-      const formattedResponse = {
-        success: true,
-        data: item,
-        timestamp: '2025-05-12T14:30:00.000Z',
-      };
+      const controller = getItemById(mockService);
+      await controller(mockContext);
 
-      sandbox.stub(templateService, 'getItemById').returns(item);
-      sandbox.stub(templateService, 'formatItemResponse').returns(formattedResponse);
-
-      // Call the controller method
-      await controller.getItemById(mockContext);
-
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal(formattedResponse);
+      expect(mockService.getItemById).to.have.been.calledWith('1');
+      expect(mockContext.json).to.have.been.calledWith(mockItem);
     });
 
-    it('should return 404 when item does not exist', async () => {
-      // Set up the request parameter
-      mockContext.req.param.returns({ id: 'nonexistent' });
+    it('should return 404 when item not found', async () => {
+      mockContext.req.param = sinon.stub().returns('999');
+      mockService.getItemById.returns(null);
 
-      // Stub the service method to return null
-      sandbox.stub(templateService, 'getItemById').returns(null);
+      const controller = getItemById(mockService);
+      await controller(mockContext);
 
-      // Call the controller method
-      await controller.getItemById(mockContext);
-
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: false,
-        error: 'Item with ID nonexistent not found',
-      });
-      expect(mockContext.json.firstCall.args[1]).to.equal(404);
-    });
-
-    it('should handle errors and return error response', async () => {
-      // Set up the request parameter
-      mockContext.req.param.returns({ id: 'test1' });
-
-      // Stub the service method to throw an error
-      const error = new Error('Test error');
-      sandbox.stub(templateService, 'getItemById').throws(error);
-
-      // Call the controller method
-      await controller.getItemById(mockContext);
-
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: false,
-        error: 'Test error',
-      });
-      expect(mockContext.json.firstCall.args[1]).to.equal(500);
+      expect(mockContext.json).to.have.been.calledWith({ error: 'Item not found' }, 404);
     });
   });
 
-  describe('createItem()', () => {
-    it('should create an item and return success response', async () => {
-      // Set up the request body
-      const requestBody = { id: 'test1', name: 'Test 1' };
-      mockContext.req.json.resolves(requestBody);
+  describe('createItem', () => {
+    it('should create item with valid data', async () => {
+      const requestData = { name: 'New Item', description: 'A new item' };
+      const createdItem = { id: '1', ...requestData, createdAt: new Date() };
 
-      // Stub the service method
-      const createdItem = { ...requestBody, createdAt: '2025-05-12T14:30:00.000Z' };
-      sandbox.stub(templateService, 'createItem').returns(createdItem);
+      mockContext.req.json.resolves(requestData);
+      mockService.createItem.returns(createdItem);
 
-      // Call the controller method
-      await controller.createItem(mockContext);
+      const controller = createItem(mockService);
+      await controller(mockContext);
 
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: true,
-        message: 'Item created successfully',
-        item: createdItem,
-      });
-      expect(mockContext.json.firstCall.args[1]).to.equal(201);
+      expect(mockService.createItem).to.have.been.calledWith(requestData);
+      expect(mockContext.json).to.have.been.calledWith(createdItem, 201);
     });
 
-    it('should handle validation errors and return 400 response', async () => {
-      // Set up the request body
-      const requestBody = { name: 'Missing ID' };
-      mockContext.req.json.resolves(requestBody);
+    it('should handle missing request body', async () => {
+      mockContext.req.json.resolves(null);
 
-      // Stub the service method to throw an error
-      const error = new Error('Invalid item data');
-      sandbox.stub(templateService, 'createItem').throws(error);
+      const controller = createItem(mockService);
+      await controller(mockContext);
 
-      // Call the controller method
-      await controller.createItem(mockContext);
+      expect(mockContext.json).to.have.been.calledWith({ error: 'Request body is required' }, 400);
+    });
 
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: false,
-        error: 'Invalid item data',
-      });
-      expect(mockContext.json.firstCall.args[1]).to.equal(400);
+    it('should handle JSON parsing errors', async () => {
+      const error = new Error('Invalid JSON');
+      mockContext.req.json.rejects(error);
+
+      const controller = createItem(mockService);
+      await controller(mockContext);
+
+      expect(mockContext.json).to.have.been.calledWith({ error: 'Invalid JSON' }, 500);
     });
   });
 
-  describe('updateItem()', () => {
-    it('should update an item and return success response', async () => {
-      // Set up the request parameter and body
-      mockContext.req.param.returns({ id: 'test1' });
-      const requestBody = { name: 'Updated Name' };
-      mockContext.req.json.resolves(requestBody);
+  describe('updateItem', () => {
+    it('should update existing item', async () => {
+      const requestData = { name: 'Updated Item' };
+      const updatedItem = { id: '1', ...requestData, updatedAt: new Date() };
 
-      // Stub the service method
-      const updatedItem = {
-        id: 'test1',
-        name: 'Updated Name',
-        createdAt: '2025-05-12T14:30:00.000Z',
-        updatedAt: '2025-05-12T14:35:00.000Z',
-      };
-      sandbox.stub(templateService, 'updateItem').returns(updatedItem);
+      mockContext.req.param = sinon.stub().returns('1');
+      mockContext.req.json.resolves(requestData);
+      mockService.updateItem.returns(updatedItem);
 
-      // Call the controller method
-      await controller.updateItem(mockContext);
+      const controller = updateItem(mockService);
+      await controller(mockContext);
 
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: true,
-        message: 'Item updated successfully',
-        item: updatedItem,
-      });
+      expect(mockService.updateItem).to.have.been.calledWith('1', requestData);
+      expect(mockContext.json).to.have.been.calledWith(updatedItem);
     });
 
-    it('should return 404 when item does not exist', async () => {
-      // Set up the request parameter and body
-      mockContext.req.param.returns({ id: 'nonexistent' });
-      const requestBody = { name: 'Updated Name' };
-      mockContext.req.json.resolves(requestBody);
+    it('should return 404 for non-existent item', async () => {
+      const requestData = { name: 'Updated Item' };
 
-      // Stub the service method to throw an error
-      const error = new Error('Item with ID nonexistent not found');
-      sandbox.stub(templateService, 'updateItem').throws(error);
+      mockContext.req.param = sinon.stub().returns('999');
+      mockContext.req.json.resolves(requestData);
+      mockService.updateItem.returns(null);
 
-      // Call the controller method
-      await controller.updateItem(mockContext);
+      const controller = updateItem(mockService);
+      await controller(mockContext);
 
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: false,
-        error: 'Item with ID nonexistent not found',
-      });
-      expect(mockContext.json.firstCall.args[1]).to.equal(404);
+      expect(mockContext.json).to.have.been.calledWith({ error: 'Item not found' }, 404);
     });
   });
 
-  describe('deleteItem()', () => {
-    it('should delete an item and return success response', async () => {
-      // Set up the request parameter
-      mockContext.req.param.returns({ id: 'test1' });
+  describe('deleteItem', () => {
+    it('should delete existing item', async () => {
+      mockContext.req.param = sinon.stub().returns('1');
+      mockService.deleteItem.returns(true);
 
-      // Stub the service method
-      sandbox.stub(templateService, 'deleteItem').returns(true);
+      const controller = deleteItem(mockService);
+      await controller(mockContext);
 
-      // Call the controller method
-      await controller.deleteItem(mockContext);
-
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: true,
-        message: 'Item deleted successfully',
-      });
+      expect(mockService.deleteItem).to.have.been.calledWith('1');
+      expect(mockContext.json).to.have.been.calledWith({ message: 'Item deleted successfully' });
     });
 
-    it('should return 404 when item does not exist', async () => {
-      // Set up the request parameter
-      mockContext.req.param.returns({ id: 'nonexistent' });
+    it('should return 404 for non-existent item', async () => {
+      mockContext.req.param = sinon.stub().returns('999');
+      mockService.deleteItem.returns(false);
 
-      // Stub the service method to return false
-      sandbox.stub(templateService, 'deleteItem').returns(false);
+      const controller = deleteItem(mockService);
+      await controller(mockContext);
 
-      // Call the controller method
-      await controller.deleteItem(mockContext);
-
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: false,
-        error: 'Item with ID nonexistent not found',
-      });
-      expect(mockContext.json.firstCall.args[1]).to.equal(404);
+      expect(mockContext.json).to.have.been.calledWith({ error: 'Item not found' }, 404);
     });
   });
 
-  describe('processItem()', () => {
-    it('should process an item and return success response', async () => {
-      // Set up the request parameter
-      mockContext.req.param.returns({ id: 'test1' });
+  describe('processItem', () => {
+    it('should process existing item', async () => {
+      const processedItem = { id: '1', processed: true, processedAt: new Date() };
 
-      // Stub the service method
-      const processedItem = {
-        id: 'test1',
-        name: 'Test 1',
-        processed: true,
-        processedAt: '2025-05-12T14:40:00.000Z',
-        result: 'Processed: test1',
-      };
-      sandbox.stub(templateService, 'processItem').resolves(processedItem);
+      mockContext.req.param = sinon.stub().returns('1');
+      mockService.processItem.resolves(processedItem);
 
-      // Call the controller method
-      await controller.processItem(mockContext);
+      const controller = processItem(mockService);
+      await controller(mockContext);
 
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: true,
-        message: 'Item processed successfully',
-        item: processedItem,
-      });
+      expect(mockService.processItem).to.have.been.calledWith('1');
+      expect(mockContext.json).to.have.been.calledWith(processedItem);
     });
 
-    it('should return 404 when item does not exist', async () => {
-      // Set up the request parameter
-      mockContext.req.param.returns({ id: 'nonexistent' });
+    it('should return 404 for non-existent item', async () => {
+      mockContext.req.param = sinon.stub().returns('999');
+      mockService.processItem.resolves(null);
 
-      // Stub the service method to throw an error
-      const error = new Error('Item with ID nonexistent not found');
-      sandbox.stub(templateService, 'processItem').rejects(error);
+      const controller = processItem(mockService);
+      await controller(mockContext);
 
-      // Call the controller method
-      await controller.processItem(mockContext);
-
-      // Verify the response
-      expect(mockContext.json.calledOnce).to.be.true;
-      expect(mockContext.json.firstCall.args[0]).to.deep.equal({
-        success: false,
-        error: 'Item with ID nonexistent not found',
-      });
-      expect(mockContext.json.firstCall.args[1]).to.equal(404);
+      expect(mockContext.json).to.have.been.calledWith({ error: 'Item not found' }, 404);
     });
+
+    it('should handle processing errors', async () => {
+      const error = new Error('Processing failed');
+
+      mockContext.req.param = sinon.stub().returns('1');
+      mockService.processItem.rejects(error);
+
+      const controller = processItem(mockService);
+      await controller(mockContext);
+
+      expect(mockContext.json).to.have.been.calledWith({ error: 'Processing failed' }, 500);
+    });
+  });
+});
+
+describe('Controller Error Handling', () => {
+  let mockService;
+  let mockContext;
+
+  beforeEach(() => {
+    mockService = createMockService();
+    mockContext = createMockContext();
+  });
+
+  it('should handle unexpected errors gracefully', async () => {
+    const error = new Error('Unexpected error');
+    mockService.getAllItems.throws(error);
+
+    const controller = getAllItems(mockService);
+    await controller(mockContext);
+
+    expect(mockContext.json).to.have.been.calledWith({ error: 'Unexpected error' }, 500);
+  });
+
+  it('should handle missing parameters', async () => {
+    mockContext.req.param = sinon.stub().returns(undefined);
+
+    const controller = getItemById(mockService);
+    await controller(mockContext);
+
+    expect(mockContext.json).to.have.been.calledWith({ error: 'Item ID is required' }, 400);
   });
 });

@@ -1,9 +1,9 @@
 {
-  "name": "mcp-module-template",
+  "name": "mcp-social-poster",
   "version": "1.0.0",
-  "description": "A template for creating new MCP server modules",
-  "main": "index.js",
+  "description": "MCP module for social media posting using @profullstack/social-poster",
   "type": "module",
+  "main": "index.js",
   "scripts": {
     "test": "mocha test/**/*.test.js",
     "test:watch": "mocha test/**/*.test.js --watch",
@@ -12,15 +12,24 @@
   },
   "keywords": [
     "mcp",
-    "module",
-    "template"
+    "social-media",
+    "posting",
+    "automation",
+    "twitter",
+    "x",
+    "linkedin",
+    "reddit",
+    "facebook",
+    "multi-platform"
   ],
-  "author": "Your Name",
-  "license": "ISC",
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
   "engines": {
     "node": ">=20.0.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@profullstack/social-poster": "^1.1.0"
+  },
   "devDependencies": {
     "chai": "^4.3.7",
     "mocha": "^10.2.0",
@@ -28,5 +37,8 @@
     "sinon-chai": "^4.0.0",
     "eslint": "^8.57.0",
     "prettier": "^3.0.0"
+  },
+  "peerDependencies": {
+    "hono": "^4.0.0"
   }
 }
