@@ -37,6 +37,29 @@ A comprehensive QR code generator module for the MCP server that converts text i
 
 ## Usage
 
+### Quick Start: Browser-Opening QR Code
+
+Generate a QR code that opens a website when scanned:
+
+```javascript
+// Using the live MCP server at https://mcp.profullstack.com
+const response = await fetch('https://mcp.profullstack.com/tools/qr-generator', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    text: 'https://mcp.profullstack.com',
+    size: 250,
+    errorCorrectionLevel: 'M',
+  }),
+});
+
+const result = await response.json();
+// The QR code data is ready to use in an image tag
+const imgSrc = `data:${result.result.qrCode.mimeType};base64,${result.result.qrCode.data}`;
+```
+
+**Scan the generated QR code with any smartphone camera or QR reader app to open the website directly in your browser!**
+
 ### As an MCP Tool
 
 **Basic QR Code Generation:**

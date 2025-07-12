@@ -5,7 +5,7 @@
  * for various QR code generation scenarios.
  */
 
-const API_BASE_URL = 'http://localhost:3000'; // MCP server URL
+const API_BASE_URL = 'https://mcp.profullstack.com'; // Live MCP server URL
 
 /**
  * Example 1: Basic QR Code Generation
@@ -74,6 +74,65 @@ async function urlQRExample() {
       console.log(`💡 Tip: ${qr.usage.description}`);
     } else {
       console.error('❌ Failed to generate URL QR code:', result.error);
+    }
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  }
+}
+
+/**
+ * Example 2.5: Browser-Opening QR Code with Live MCP Server
+ */
+async function browserOpeningQRExample() {
+  console.log('\n🌐 Example 2.5: Browser-Opening QR Code with Live MCP Server');
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/tools/qr-generator`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: 'https://mcp.profullstack.com',
+        size: 250,
+        errorCorrectionLevel: 'M',
+        format: 'png',
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.result) {
+      const qr = result.result;
+      console.log('✅ Browser-opening QR code generated!');
+      console.log(`🔗 URL: ${qr.input.text}`);
+      console.log(`📏 Size: ${qr.qrCode.size.pixels}px`);
+      console.log(`🛡️ Error Correction: ${qr.metadata.errorCorrectionLevel}`);
+      console.log(`📱 Format: ${qr.metadata.format.toUpperCase()}`);
+      console.log('📱 Usage: Scan with smartphone camera to open website');
+      console.log(`💾 Data size: ${qr.qrCode.data.length} characters`);
+
+      console.log('\n📋 Implementation Examples:');
+      console.log('HTML:');
+      console.log(
+        `  <img src="data:${qr.qrCode.mimeType};base64,${qr.qrCode.data.substring(0, 50)}..." alt="QR Code" />`
+      );
+
+      console.log('\nJavaScript:');
+      console.log('  const img = document.createElement("img");');
+      console.log(`  img.src = "data:${qr.qrCode.mimeType};base64," + qrCodeData;`);
+      console.log('  document.body.appendChild(img);');
+
+      console.log('\n🎯 Perfect for:');
+      console.log('  • Business cards with website links');
+      console.log('  • Marketing materials');
+      console.log('  • Event flyers');
+      console.log('  • Product packaging');
+      console.log('  • Digital displays');
+
+      console.log(`\n💡 Tip: ${qr.usage.description}`);
+    } else {
+      console.error('❌ Failed to generate browser-opening QR code:', result.error);
     }
   } catch (error) {
     console.error('❌ Error:', error.message);
@@ -511,6 +570,9 @@ async function runExamples() {
   await urlQRExample();
   await new Promise(resolve => setTimeout(resolve, 500));
 
+  await browserOpeningQRExample();
+  await new Promise(resolve => setTimeout(resolve, 500));
+
   await printQRExample();
   await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -553,6 +615,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 export {
   basicQRExample,
   urlQRExample,
+  browserOpeningQRExample,
   printQRExample,
   contactQRExample,
   wifiQRExample,
