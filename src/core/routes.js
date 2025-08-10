@@ -70,6 +70,15 @@ export function setupCoreRoutes(app) {
       }
 
       const hasId = Object.prototype.hasOwnProperty.call(payload, 'id');
+      // If this is a JSON-RPC response (has id, has result or error, and no method), accept silently (202 at top level)
+      const isResponseLike =
+        hasId &&
+        !Object.prototype.hasOwnProperty.call(payload, 'method') &&
+        (Object.prototype.hasOwnProperty.call(payload, 'result') ||
+          Object.prototype.hasOwnProperty.call(payload, 'error'));
+      if (isResponseLike) {
+        return null;
+      }
       const id = hasId ? payload.id : undefined; // undefined means notification
       const methodName = String(payload?.method ?? '').toLowerCase();
       const params = payload?.params ?? {};
