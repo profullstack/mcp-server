@@ -1,0 +1,28 @@
+{
+  "name": "mcp-module-readme-badges",
+  "version": "1.0.0",
+  "description": "Generate shields.io badges and update README.md with idempotent markers",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js --timeout 10000"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "readme",
+    "badges",
+    "shields.io",
+    "documentation"
+  ],
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0"
+  }
+}
