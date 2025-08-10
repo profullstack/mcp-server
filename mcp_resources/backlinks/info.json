@@ -1,0 +1,9 @@
+{
+  "name": "backlinks",
+  "description": "Resources for the backlinks module (docs and examples).",
+  "uris": [
+    "resource://backlinks/info",
+    "resource://backlinks/docs",
+    "resource://backlinks/examples"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "craigslist",
+  "description": "Resources for the craigslist module (docs and examples).",
+  "uris": [
+    "resource://craigslist/info",
+    "resource://craigslist/docs",
+    "resource://craigslist/examples"
+  ]
+}

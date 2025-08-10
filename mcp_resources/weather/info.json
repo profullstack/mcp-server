@@ -1,0 +1,5 @@
+{
+  "name": "weather",
+  "description": "Resources for the weather module (docs and examples).",
+  "uris": ["resource://weather/info", "resource://weather/docs", "resource://weather/examples"]
+}

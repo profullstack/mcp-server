@@ -1,0 +1,9 @@
+{
+  "name": "health-check",
+  "description": "Resources for the health-check module (docs and examples).",
+  "uris": [
+    "resource://health-check/info",
+    "resource://health-check/docs",
+    "resource://health-check/examples"
+  ]
+}

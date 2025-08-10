@@ -1,0 +1,9 @@
+{
+  "name": "convert2doc",
+  "description": "Resources for the convert2doc module (docs and examples).",
+  "uris": [
+    "resource://convert2doc/info",
+    "resource://convert2doc/docs",
+    "resource://convert2doc/examples"
+  ]
+}

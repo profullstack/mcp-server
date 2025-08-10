@@ -1,0 +1,9 @@
+{
+  "name": "calculator",
+  "description": "Resources for the calculator module (docs and examples).",
+  "uris": [
+    "resource://calculator/info",
+    "resource://calculator/docs",
+    "resource://calculator/examples"
+  ]
+}

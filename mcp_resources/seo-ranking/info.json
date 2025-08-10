@@ -1,0 +1,9 @@
+{
+  "name": "seo-ranking",
+  "description": "Resources for the seo-ranking module (docs and examples).",
+  "uris": [
+    "resource://seo-ranking/info",
+    "resource://seo-ranking/docs",
+    "resource://seo-ranking/examples"
+  ]
+}

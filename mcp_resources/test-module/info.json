@@ -1,0 +1,9 @@
+{
+  "name": "test-module",
+  "description": "Resources for the test-module module (docs and examples).",
+  "uris": [
+    "resource://test-module/info",
+    "resource://test-module/docs",
+    "resource://test-module/examples"
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "name": "wcag",
+  "description": "Resources for the wcag module (docs and examples).",
+  "uris": ["resource://wcag/info", "resource://wcag/docs", "resource://wcag/examples"]
+}

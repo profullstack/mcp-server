@@ -1,0 +1,9 @@
+{
+  "name": "readme-badges",
+  "description": "Resources for the readme-badges module (docs and examples).",
+  "uris": [
+    "resource://readme-badges/info",
+    "resource://readme-badges/docs",
+    "resource://readme-badges/examples"
+  ]
+}

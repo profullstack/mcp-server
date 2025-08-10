@@ -1,0 +1,9 @@
+{
+  "name": "linkchecker",
+  "description": "Resources for the linkchecker module (docs and examples).",
+  "uris": [
+    "resource://linkchecker/info",
+    "resource://linkchecker/docs",
+    "resource://linkchecker/examples"
+  ]
+}

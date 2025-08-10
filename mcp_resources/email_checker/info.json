@@ -1,0 +1,9 @@
+{
+  "name": "email_checker",
+  "description": "Resources for the email_checker module (docs and examples).",
+  "uris": [
+    "resource://email_checker/info",
+    "resource://email_checker/docs",
+    "resource://email_checker/examples"
+  ]
+}

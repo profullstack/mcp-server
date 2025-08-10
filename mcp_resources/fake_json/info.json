@@ -1,0 +1,9 @@
+{
+  "name": "fake_json",
+  "description": "Resources for the fake_json module (docs and examples).",
+  "uris": [
+    "resource://fake_json/info",
+    "resource://fake_json/docs",
+    "resource://fake_json/examples"
+  ]
+}

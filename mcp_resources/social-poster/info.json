@@ -1,0 +1,9 @@
+{
+  "name": "social-poster",
+  "description": "Resources for the social-poster module (docs and examples).",
+  "uris": [
+    "resource://social-poster/info",
+    "resource://social-poster/docs",
+    "resource://social-poster/examples"
+  ]
+}

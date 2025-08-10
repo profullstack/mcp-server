@@ -1,0 +1,5 @@
+{
+  "name": "template",
+  "description": "Resources for the template module (docs and examples).",
+  "uris": ["resource://template/info", "resource://template/docs", "resource://template/examples"]
+}

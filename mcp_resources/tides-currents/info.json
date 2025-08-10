@@ -1,0 +1,9 @@
+{
+  "name": "tides-currents",
+  "description": "Resources for the tides-currents module (docs and examples).",
+  "uris": [
+    "resource://tides-currents/info",
+    "resource://tides-currents/docs",
+    "resource://tides-currents/examples"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "lighthouse",
+  "description": "Resources for the lighthouse module (docs and examples).",
+  "uris": [
+    "resource://lighthouse/info",
+    "resource://lighthouse/docs",
+    "resource://lighthouse/examples"
+  ]
+}

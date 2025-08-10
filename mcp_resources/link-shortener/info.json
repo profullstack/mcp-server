@@ -1,0 +1,9 @@
+{
+  "name": "link-shortener",
+  "description": "Resources for the link-shortener module (docs and examples).",
+  "uris": [
+    "resource://link-shortener/info",
+    "resource://link-shortener/docs",
+    "resource://link-shortener/examples"
+  ]
+}

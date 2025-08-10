@@ -1,0 +1,9 @@
+{
+  "name": "news-aggregator",
+  "description": "Resources for the news-aggregator module (docs and examples).",
+  "uris": [
+    "resource://news-aggregator/info",
+    "resource://news-aggregator/docs",
+    "resource://news-aggregator/examples"
+  ]
+}

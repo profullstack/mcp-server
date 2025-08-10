@@ -1,0 +1,5 @@
+{
+  "name": "scanner",
+  "description": "Resources for the scanner module (docs and examples).",
+  "uris": ["resource://scanner/info", "resource://scanner/docs", "resource://scanner/examples"]
+}

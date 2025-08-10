@@ -1,0 +1,9 @@
+{
+  "name": "domain_lookup",
+  "description": "Resources for the domain_lookup module (docs and examples).",
+  "uris": [
+    "resource://domain_lookup/info",
+    "resource://domain_lookup/docs",
+    "resource://domain_lookup/examples"
+  ]
+}

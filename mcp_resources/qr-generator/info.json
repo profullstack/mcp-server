@@ -1,0 +1,9 @@
+{
+  "name": "qr-generator",
+  "description": "Resources for the qr-generator module (docs and examples).",
+  "uris": [
+    "resource://qr-generator/info",
+    "resource://qr-generator/docs",
+    "resource://qr-generator/examples"
+  ]
+}
