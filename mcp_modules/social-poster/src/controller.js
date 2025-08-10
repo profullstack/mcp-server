@@ -117,7 +117,7 @@ export function getPlatformStatus(service) {
 export function getAvailablePlatforms(service) {
   return async c => {
     try {
-      const platforms = service.getAvailablePlatforms();
+      const platforms = await service.getAvailablePlatforms();
       const result = {
         platforms,
         count: platforms.length,

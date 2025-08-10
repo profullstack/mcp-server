@@ -4,7 +4,7 @@
  * Provides a clean interface for MCP integration
  */
 
-import { SocialPoster } from '@profullstack/social-poster';
+/* SocialPoster will be dynamically imported at runtime to avoid init-side effects */
 
 /**
  * Social Posting Service class
@@ -20,8 +20,32 @@ export class SocialPostingService {
       ...options,
     };
 
-    // Initialize the social poster instance or use provided mock for testing
-    this.socialPoster = options.socialPoster || new SocialPoster(this.options);
+    // Defer SocialPoster import/instantiation to runtime to avoid env coupling
+    this.socialPoster = options.socialPoster || null;
+  }
+
+  /**
+   * Ensure SocialPoster instance exists (lazy dynamic import)
+   * @returns {Promise<any>} SocialPoster instance
+   */
+  async ensurePoster() {
+    if (!this.socialPoster) {
+      try {
+        const mod = await import('@profullstack/social-poster');
+        const SocialPoster = mod.SocialPoster ?? mod.default?.SocialPoster ?? mod.default;
+        this.socialPoster = this.options.socialPoster || new SocialPoster(this.options);
+      } catch (error) {
+        const msg = error?.message || String(error);
+        if (msg.includes('loadConfig is not defined')) {
+          throw new Error(
+            'social-poster dependency initialization failed: loadConfig is not defined. ' +
+              'Ensure @profullstack/social-poster is up to date and SOCIAL_POSTER_* environment variables are configured.'
+          );
+        }
+        throw error;
+      }
+    }
+    return this.socialPoster;
   }
 
   /**
@@ -82,7 +106,8 @@ export class SocialPostingService {
       }
 
       // Post using the social poster
-      const result = await this.socialPoster.post(content, platforms);
+      const poster = await this.ensurePoster();
+      const result = await poster.post(content, platforms);
 
       return {
         ...result,
@@ -105,7 +130,8 @@ export class SocialPostingService {
    */
   async loginToPlatform(platform, options = {}) {
     try {
-      const success = await this.socialPoster.login(platform, options);
+      const poster = await this.ensurePoster();
+      const success = await poster.login(platform, options);
 
       return {
         success,
@@ -129,7 +155,8 @@ export class SocialPostingService {
    */
   async getPlatformStatus() {
     try {
-      return this.socialPoster.getAuthStatus();
+      const poster = await this.ensurePoster();
+      return poster.getAuthStatus();
     } catch (error) {
       throw new Error(`Failed to get platform status: ${error.message}`);
     }
@@ -139,9 +166,10 @@ export class SocialPostingService {
    * Get available platforms for posting
    * @returns {string[]} Array of available platform names
    */
-  getAvailablePlatforms() {
+  async getAvailablePlatforms() {
     try {
-      return this.socialPoster.getAvailablePlatforms();
+      const poster = await this.ensurePoster();
+      return poster.getAvailablePlatforms();
     } catch (error) {
       throw new Error(`Failed to get available platforms: ${error.message}`);
     }
