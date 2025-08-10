@@ -872,11 +872,18 @@ export function setupCoreRoutes(app) {
 
           // docs directory resource (list files)
           const docsLink = path.join(base, 'docs');
-          if (fs.existsSync(docsLink)) {
+          const moduleDir = path.resolve(__dirname, '..', '..', 'mcp_modules', mod);
+          const docsFallbackDir = path.join(moduleDir, 'docs');
+          const readmePath = path.join(moduleDir, 'README.md');
+          if (
+            fs.existsSync(docsLink) ||
+            fs.existsSync(docsFallbackDir) ||
+            fs.existsSync(readmePath)
+          ) {
             resources.push({
               uri: `resource://${mod}/docs`,
               name: `${mod} docs`,
-              description: `Documentation symlink for ${mod} module`,
+              description: `Documentation symlink or fallback for ${mod} module`,
               mimeType: 'application/json',
             });
           }
@@ -930,6 +937,9 @@ export function setupCoreRoutes(app) {
       const docsPath = path.join(base, 'docs');
       const examplesPath = path.join(base, 'examples');
 
+      const moduleDir = path.resolve(__dirname, '..', '..', 'mcp_modules', mod);
+      const docsFallbackDir = path.join(moduleDir, 'docs');
+      const readmePath = path.join(moduleDir, 'README.md');
       let info = null;
       if (fs.existsSync(infoPath)) {
         try {
@@ -962,7 +972,8 @@ export function setupCoreRoutes(app) {
 
       const available = {
         info: fs.existsSync(infoPath),
-        docs: fs.existsSync(docsPath),
+        docs:
+          fs.existsSync(docsPath) || fs.existsSync(docsFallbackDir) || fs.existsSync(readmePath),
         examples: fs.existsSync(examplesPath),
       };
 
@@ -1042,6 +1053,45 @@ export function setupCoreRoutes(app) {
 
       const dirPath = path.join(base, kind);
       if (!fs.existsSync(dirPath)) {
+        const moduleDir = path.resolve(__dirname, '..', '..', 'mcp_modules', mod);
+        const fallbackDir = path.join(moduleDir, 'docs');
+        const readmePath = path.join(moduleDir, 'README.md');
+
+        if (fs.existsSync(fallbackDir)) {
+          // Minimal local lister for fallback dir (avoid reordering code)
+          const listFilesFrom = dir => {
+            const out = [];
+            const walk = rel => {
+              const abs = path.join(dir, rel);
+              const entries = fs.readdirSync(abs, { withFileTypes: true });
+              for (const e of entries) {
+                const nextRel = path.join(rel, e.name);
+                if (e.isDirectory()) {
+                  walk(nextRel);
+                } else {
+                  out.push(nextRel);
+                }
+              }
+            };
+            walk('.');
+            return out;
+          };
+          const files = listFilesFrom(fallbackDir);
+          return c.json({
+            uri: `resource://${mod}/${kind}`,
+            mimeType: 'application/json',
+            data: { directory: kind, module: mod, files },
+          });
+        } else if (fs.existsSync(readmePath)) {
+          // Single-file fallback to README.md
+          const files = ['README.md'];
+          return c.json({
+            uri: `resource://${mod}/${kind}`,
+            mimeType: 'application/json',
+            data: { directory: kind, module: mod, files },
+          });
+        }
+
         return c.json(
           { error: { code: 'resource_not_found', message: 'Resource not found' } },
           404
