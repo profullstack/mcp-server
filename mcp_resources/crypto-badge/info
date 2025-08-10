@@ -1,0 +1,54 @@
+# Crypto Badge Module Resources
+
+This directory contains resources for the crypto-badge module, including documentation and examples for generating cryptocurrency payment badges using the PayBadge API.
+
+## Available Resources
+
+- **docs**: Complete documentation for the crypto-badge module
+- **examples**: Usage examples and integration guides
+
+## Module Overview
+
+The crypto-badge module provides tools for generating cryptocurrency payment badges with support for:
+
+- Bitcoin, Ethereum, Solana, USDC
+- Custom styling and colors
+- Preset configurations
+- Multi-cryptocurrency badges
+- Markdown and HTML output formats
+- Security features and input validation
+
+## Quick Start
+
+Generate a Bitcoin payment badge:
+
+```json
+{
+  "action": "generate-preset",
+  "baseUrl": "https://paybadge.profullstack.com",
+  "preset": "bitcoin",
+  "linkUrl": "https://github.com/user/repo"
+}
+```
+
+## Available Actions
+
+- `generate`: Generate badge URL with custom parameters
+- `generate-markdown`: Generate Markdown badge code
+- `generate-html`: Generate HTML badge code
+- `generate-preset`: Generate badge using preset configuration
+- `generate-multi-crypto`: Generate badge for multiple cryptocurrencies
+- `list-presets`: List available preset configurations
+- `get-config`: Get service configuration and defaults
+
+## Presets
+
+- `bitcoin`: Bitcoin payment badge with orange branding
+- `ethereum`: Ethereum payment badge with blue branding
+- `solana`: Solana payment badge with green branding
+- `usdc`: USDC payment badge with blue branding
+- `donation`: Generic donation badge
+- `support`: Project support badge
+- `multiCrypto`: Multi-cryptocurrency payment badge
+
+For detailed documentation and examples, see the docs and examples resources.

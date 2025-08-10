@@ -1,0 +1,48 @@
+{
+  "name": "mcp-module-crypto-badge",
+  "version": "1.0.0",
+  "description": "Generate crypto payment badges using PayBadge API with support for Bitcoin, Ethereum, Solana, USDC and custom configurations",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js --timeout 10000",
+    "test:watch": "mocha test/**/*.test.js --timeout 10000 --watch",
+    "test:coverage": "c8 mocha test/**/*.test.js --timeout 10000"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "crypto",
+    "badge",
+    "bitcoin",
+    "ethereum",
+    "solana",
+    "usdc",
+    "payment",
+    "paybadge",
+    "cryptocurrency",
+    "donation",
+    "github",
+    "readme"
+  ],
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "c8": "^8.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/profullstack/mcp-server.git",
+    "directory": "mcp_modules/crypto-badge"
+  },
+  "bugs": {
+    "url": "https://github.com/profullstack/mcp-server/issues"
+  },
+  "homepage": "https://github.com/profullstack/mcp-server/tree/main/mcp_modules/crypto-badge#readme"
+}
