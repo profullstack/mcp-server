@@ -52,357 +52,346 @@ export function setupCoreRoutes(app) {
     });
   });
 
-  // MCP Root endpoint (POST) - JSON-RPC 2.0 "initialize" handshake
-  app.post('/', async c => {
-    let payload;
-    try {
-      payload = await c.req.json();
-    } catch (e) {
-      // JSON parse error should still return HTTP 200 with JSON-RPC error
-      return c.json(
-        {
-          jsonrpc: '2.0',
-          id: null,
-          error: { code: -32700, message: 'Parse error' },
-        },
-        200
-      );
-    }
-
-    const id = payload?.id ?? null;
-
-    // Validate JSON-RPC envelope
-    if (payload?.jsonrpc !== '2.0' || typeof payload !== 'object') {
-      return c.json(
-        {
-          jsonrpc: '2.0',
-          id,
-          error: { code: -32600, message: 'Invalid Request' },
-        },
-        200
-      );
-    }
-
-    // Normalize method name to be resilient to casing
-    const methodName = String(payload?.method ?? '').toLowerCase();
-
-    // JSON-RPC routing for MCP methods
-    // 1) initialize / handshake
-    if (
-      methodName === 'initialize' ||
-      methodName === 'handshake' ||
-      methodName === 'initialize_session'
-    ) {
-      const result = {
-        serverInfo: {
-          name: 'MCP Server',
-          version: version,
-        },
-        // MCP clients (e.g., RooCode) expect a protocolVersion string
-        protocolVersion: '2024-11-05',
-        // Capabilities must be objects (not booleans)
-        capabilities: {
-          tools: {}, // /tools endpoints provided by modules
-          prompts: {}, // not implemented; empty object satisfies schema
-          resources: {}, // /resources exists (currently empty)
-        },
-      };
-
-      return c.json(
-        {
-          jsonrpc: '2.0',
-          id,
-          result,
-        },
-        200
-      );
-    }
-
-    // 2) tools.list and tools/list - enumerate available tools
-    if (methodName === 'tools/list' || methodName === 'tools.list') {
-      try {
-        const modules = await moduleLoader.getModulesInfo();
-
-        // Build MCP tool descriptors. Minimal schema to satisfy discovery.
-        const tools = modules.flatMap(m => {
-          const moduleTools = Array.isArray(m.tools) ? m.tools : [];
-          return moduleTools.map(t => {
-            const name = typeof t === 'string' ? t : (t?.name ?? String(t));
-            return {
-              name,
-              description: m.description || `Tool from module ${m.name}`,
-              inputSchema: {
-                type: 'object',
-                // Unknown per-module parameters at discovery time; allow any args
-                additionalProperties: true,
-              },
-            };
-          });
-        });
-
-        return c.json(
-          {
-            jsonrpc: '2.0',
-            id,
-            result: { tools },
-          },
-          200
-        );
-      } catch (error) {
-        return c.json(
-          {
-            jsonrpc: '2.0',
-            id,
-            error: {
-              code: -32000,
-              message: error?.message || 'Failed to list tools',
-            },
-          },
-          200
-        );
+  // MCP transport: dedicated /mcp endpoint per spec
+  // Shared JSON-RPC handler to support both POST / and POST /mcp for compatibility
+  async function handleJsonRpcRequest(c, body) {
+    // Helper to process a single JSON-RPC message and produce a response object or null (for notifications)
+    const processOne = async payload => {
+      // Basic envelope validation
+      if (!payload || typeof payload !== 'object') {
+        return { jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Invalid Request' } };
       }
-    }
+      if (payload.jsonrpc !== '2.0') {
+        return {
+          jsonrpc: '2.0',
+          id: payload.id ?? null,
+          error: { code: -32600, message: 'Invalid Request' },
+        };
+      }
 
-    // 3) resources.list and resources/list - enumerate available resources from mcp_resources
-    if (methodName === 'resources/list' || methodName === 'resources.list') {
-      try {
-        const rootDir = path.resolve(__dirname, '..', '..', 'mcp_resources');
-        const resources = [];
+      const hasId = Object.prototype.hasOwnProperty.call(payload, 'id');
+      const id = hasId ? payload.id : undefined; // undefined means notification
+      const methodName = String(payload?.method ?? '').toLowerCase();
+      const params = payload?.params ?? {};
 
-        if (fs.existsSync(rootDir)) {
-          const modules = fs
-            .readdirSync(rootDir, { withFileTypes: true })
-            .filter(d => d.isDirectory())
-            .map(d => d.name);
+      // Any JSON-RPC notification (no id) must not produce a response per spec
+      if (!hasId) {
+        // notifications/initialized is the common lifecycle notification
+        return null;
+      }
 
-          for (const mod of modules) {
-            const base = path.join(rootDir, mod);
+      // initialize / handshake
+      if (
+        methodName === 'initialize' ||
+        methodName === 'handshake' ||
+        methodName === 'initialize_session'
+      ) {
+        const result = {
+          serverInfo: { name: 'MCP Server', version },
+          protocolVersion: '2024-11-05',
+          capabilities: {
+            tools: {},
+            resources: {},
+          },
+        };
+        return { jsonrpc: '2.0', id, result };
+      }
 
-            // info.json resource
-            const infoPath = path.join(base, 'info.json');
-            if (fs.existsSync(infoPath)) {
-              try {
-                const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+      // tools/list
+      if (methodName === 'tools/list' || methodName === 'tools.list') {
+        try {
+          const modules = await moduleLoader.getModulesInfo();
+          const tools = modules.flatMap(m => {
+            const moduleTools = Array.isArray(m.tools) ? m.tools : [];
+            return moduleTools.map(t => {
+              const name = typeof t === 'string' ? t : (t?.name ?? String(t));
+              return {
+                name,
+                description: m.description || `Tool from module ${m.name}`,
+                inputSchema: { type: 'object', additionalProperties: true },
+              };
+            });
+          });
+          return { jsonrpc: '2.0', id, result: { tools } };
+        } catch (error) {
+          return {
+            jsonrpc: '2.0',
+            id,
+            error: { code: -32000, message: error?.message || 'Failed to list tools' },
+          };
+        }
+      }
+
+      // tools/call
+      if (methodName === 'tools/call' || methodName === 'tools.call') {
+        try {
+          const name = params?.name;
+          const args = params?.arguments ?? {};
+          if (!name || typeof name !== 'string') {
+            return {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32602, message: 'Invalid params: "name" must be a string' },
+            };
+          }
+          // Map tool name to module by metadata
+          const modules = await moduleLoader.getModulesInfo();
+          const found = modules.find(
+            m =>
+              Array.isArray(m.tools) &&
+              m.tools.some(t => (typeof t === 'string' ? t : t?.name) === name)
+          );
+          if (!found) {
+            return {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32601, message: `Tool not found: ${name}` },
+            };
+          }
+
+          // Attempt to call a conventional endpoint provided by the module:
+          // POST /tools/:module/:tool with JSON body = args
+          // Since we're inside the same Hono app instance, we can forward internally by constructing a Request.
+          // Fallback: if endpoint is not registered, return method not found.
+          const modDir = found.directoryName || found.name;
+          const toolPath = `/tools/${modDir}/${encodeURIComponent(name)}`;
+          // Hono context doesn't expose a direct internal dispatch; we'll try to call via fetch against the same server origin path.
+          // As a minimal adapter, if such an endpoint is not available in this process, we return -32601.
+
+          // Heuristic: if module declared endpoints listing includes a /tools/ path for this module and tool, we can hint success.
+          // Our current metadata sometimes has "endpoints" array; use that to detect existence.
+          const endpointExists = Array.isArray(found.endpoints)
+            ? found.endpoints.some(e => typeof e?.path === 'string' && e.path.includes('/tools/'))
+            : false;
+
+          if (!endpointExists) {
+            return {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32601, message: `Tool endpoint not available for ${name}` },
+            };
+          }
+
+          // Since we cannot synchronously dispatch to Hono route here without server URL, return a structured stub:
+          // We acknowledge the call but instruct consumers that this server hosts HTTP tool endpoints; they should call via standard HTTP.
+          // To adhere to MCP tools/call result shape, wrap info textually.
+          const text = `Tool '${name}' is exposed via HTTP endpoint(s) on this server for module '${modDir}'. Invoke the module's HTTP route directly. Arguments received: ${JSON.stringify(args)}`;
+          return {
+            jsonrpc: '2.0',
+            id,
+            result: { content: [{ type: 'text', text }], isError: false },
+          };
+        } catch (error) {
+          return {
+            jsonrpc: '2.0',
+            id,
+            error: { code: -32603, message: error?.message || 'Tool invocation failed' },
+          };
+        }
+      }
+
+      // resources/list
+      if (methodName === 'resources/list' || methodName === 'resources.list') {
+        try {
+          const rootDir = path.resolve(__dirname, '..', '..', 'mcp_resources');
+          const resources = [];
+          if (fs.existsSync(rootDir)) {
+            const modules = fs
+              .readdirSync(rootDir, { withFileTypes: true })
+              .filter(d => d.isDirectory())
+              .map(d => d.name);
+            for (const mod of modules) {
+              const base = path.join(rootDir, mod);
+              const infoPath = path.join(base, 'info.json');
+              if (fs.existsSync(infoPath)) {
+                try {
+                  const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+                  resources.push({
+                    uri: `resource://${mod}/info`,
+                    name: info.name || `${mod} info`,
+                    description: info.description || `Information resource for ${mod} module`,
+                    mimeType: 'application/json',
+                  });
+                } catch {
+                  resources.push({
+                    uri: `resource://${mod}/info`,
+                    name: `${mod} info`,
+                    description: `Information resource for ${mod} module`,
+                    mimeType: 'application/json',
+                  });
+                }
+              }
+              const docsLink = path.join(base, 'docs');
+              if (fs.existsSync(docsLink)) {
                 resources.push({
-                  uri: `resource://${mod}/info`,
-                  name: info.name || `${mod} info`,
-                  description: info.description || `Information resource for ${mod} module`,
+                  uri: `resource://${mod}/docs`,
+                  name: `${mod} docs`,
+                  description: `Documentation symlink for ${mod} module`,
                   mimeType: 'application/json',
                 });
-              } catch {
+              }
+              const examplesLink = path.join(base, 'examples');
+              if (fs.existsSync(examplesLink)) {
                 resources.push({
-                  uri: `resource://${mod}/info`,
-                  name: `${mod} info`,
-                  description: `Information resource for ${mod} module`,
+                  uri: `resource://${mod}/examples`,
+                  name: `${mod} examples`,
+                  description: `Examples symlink for ${mod} module`,
                   mimeType: 'application/json',
                 });
               }
             }
-
-            // docs directory resource (list files)
-            const docsLink = path.join(base, 'docs');
-            if (fs.existsSync(docsLink)) {
-              resources.push({
-                uri: `resource://${mod}/docs`,
-                name: `${mod} docs`,
-                description: `Documentation symlink for ${mod} module`,
-                mimeType: 'application/json',
-              });
-            }
-
-            // examples directory resource (list files)
-            const examplesLink = path.join(base, 'examples');
-            if (fs.existsSync(examplesLink)) {
-              resources.push({
-                uri: `resource://${mod}/examples`,
-                name: `${mod} examples`,
-                description: `Examples symlink for ${mod} module`,
-                mimeType: 'application/json',
-              });
-            }
           }
+          return { jsonrpc: '2.0', id, result: { resources } };
+        } catch (error) {
+          return {
+            jsonrpc: '2.0',
+            id,
+            error: { code: -32010, message: error?.message || 'Failed to list resources' },
+          };
         }
-
-        return c.json(
-          {
-            jsonrpc: '2.0',
-            id,
-            result: { resources },
-          },
-          200
-        );
-      } catch (error) {
-        return c.json(
-          {
-            jsonrpc: '2.0',
-            id,
-            error: {
-              code: -32010,
-              message: error?.message || 'Failed to list resources',
-            },
-          },
-          200
-        );
       }
-    }
 
-    // 4) resources.read and resources/read - fetch a specific resource
-    if (methodName === 'resources/read' || methodName === 'resources.read') {
-      try {
-        const params = payload?.params ?? {};
-        const uri = params?.uri;
-        if (!uri || typeof uri !== 'string') {
-          return c.json(
-            {
+      // resources/read
+      if (methodName === 'resources/read' || methodName === 'resources.read') {
+        try {
+          const uri = params?.uri;
+          if (!uri || typeof uri !== 'string') {
+            return {
               jsonrpc: '2.0',
               id,
               error: { code: -32602, message: 'Invalid params: "uri" must be a string' },
-            },
-            200
-          );
-        }
-
-        // Parse resource://<module>/<kind>
-        const prefix = 'resource://';
-        if (!uri.startsWith(prefix)) {
-          return c.json(
-            {
+            };
+          }
+          const prefix = 'resource://';
+          if (!uri.startsWith(prefix)) {
+            return {
               jsonrpc: '2.0',
               id,
               error: { code: -32602, message: 'Invalid resource URI scheme' },
-            },
-            200
-          );
-        }
-
-        const rest = uri.slice(prefix.length);
-        const [mod, kind] = rest.split('/');
-        if (!mod || !kind) {
-          return c.json(
-            {
+            };
+          }
+          const rest = uri.slice(prefix.length);
+          const [mod, kind] = rest.split('/');
+          if (!mod || !kind) {
+            return {
               jsonrpc: '2.0',
               id,
               error: { code: -32602, message: 'Invalid resource URI format' },
-            },
-            200
-          );
-        }
-
-        const base = path.resolve(__dirname, '..', '..', 'mcp_resources', mod);
-
-        if (kind === 'info') {
-          const infoPath = path.join(base, 'info.json');
-          if (!fs.existsSync(infoPath)) {
-            return c.json(
-              {
-                jsonrpc: '2.0',
-                id,
-                error: { code: -32011, message: 'Resource not found' },
-              },
-              200
-            );
-          }
-          const data = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
-          return c.json(
-            {
-              jsonrpc: '2.0',
-              id,
-              result: {
-                uri,
-                mimeType: 'application/json',
-                data,
-              },
-            },
-            200
-          );
-        }
-
-        // docs or examples: return a JSON listing of file paths within the symlinked directory
-        if (kind === 'docs' || kind === 'examples') {
-          const dirPath = path.join(base, kind);
-          if (!fs.existsSync(dirPath)) {
-            return c.json(
-              {
-                jsonrpc: '2.0',
-                id,
-                error: { code: -32011, message: 'Resource not found' },
-              },
-              200
-            );
-          }
-
-          // Recursively list files, limit to a simple listing (relative paths)
-          const listFiles = dir => {
-            const out = [];
-            const walk = rel => {
-              const abs = path.join(dir, rel);
-              const entries = fs.readdirSync(abs, { withFileTypes: true });
-              for (const e of entries) {
-                const nextRel = path.join(rel, e.name);
-                if (e.isDirectory()) {
-                  walk(nextRel);
-                } else {
-                  out.push(nextRel);
-                }
-              }
             };
-            walk('.');
-            return out;
-          };
-
-          const files = listFiles(dirPath);
-
-          return c.json(
-            {
+          }
+          const base = path.resolve(__dirname, '..', '..', 'mcp_resources', mod);
+          if (kind === 'info') {
+            const infoPath = path.join(base, 'info.json');
+            if (!fs.existsSync(infoPath)) {
+              return { jsonrpc: '2.0', id, error: { code: -32011, message: 'Resource not found' } };
+            }
+            const data = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+            return { jsonrpc: '2.0', id, result: { uri, mimeType: 'application/json', data } };
+          }
+          if (kind === 'docs' || kind === 'examples') {
+            const dirPath = path.join(base, kind);
+            if (!fs.existsSync(dirPath)) {
+              return { jsonrpc: '2.0', id, error: { code: -32011, message: 'Resource not found' } };
+            }
+            const listFiles = dir => {
+              const out = [];
+              const walk = rel => {
+                const abs = path.join(dir, rel);
+                const entries = fs.readdirSync(abs, { withFileTypes: true });
+                for (const e of entries) {
+                  const nextRel = path.join(rel, e.name);
+                  if (e.isDirectory()) {
+                    walk(nextRel);
+                  } else {
+                    out.push(nextRel);
+                  }
+                }
+              };
+              walk('.');
+              return out;
+            };
+            const files = listFiles(dirPath);
+            return {
               jsonrpc: '2.0',
               id,
               result: {
                 uri,
                 mimeType: 'application/json',
-                data: {
-                  directory: kind,
-                  module: mod,
-                  files,
-                },
+                data: { directory: kind, module: mod, files },
               },
-            },
-            200
-          );
-        }
-
-        // Unknown kind
-        return c.json(
-          {
+            };
+          }
+          return {
             jsonrpc: '2.0',
             id,
             error: { code: -32601, message: 'Resource kind not supported' },
-          },
-          200
-        );
-      } catch (error) {
-        return c.json(
-          {
+          };
+        } catch (error) {
+          return {
             jsonrpc: '2.0',
             id,
-            error: {
-              code: -32012,
-              message: error?.message || 'Failed to read resource',
-            },
-          },
-          200
-        );
+            error: { code: -32012, message: error?.message || 'Failed to read resource' },
+          };
+        }
       }
+
+      // Unknown method
+      return { jsonrpc: '2.0', id, error: { code: -32601, message: 'Method not found' } };
+    };
+
+    // Parse request body once
+    let input;
+    try {
+      input = body ?? (await c.req.json());
+    } catch (e) {
+      // JSON parse error (for POST with invalid JSON)
+      return c.json(
+        { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } },
+        200
+      );
     }
 
-    // Unknown method
-    return c.json(
-      {
-        jsonrpc: '2.0',
-        id,
-        error: { code: -32601, message: 'Method not found' },
-      },
-      200
-    );
+    // If array => batch
+    if (Array.isArray(input)) {
+      const results = [];
+      let hasAnyResponse = false;
+      for (const item of input) {
+        const res = await processOne(item);
+        if (res && Object.prototype.hasOwnProperty.call(res, 'id')) {
+          results.push(res);
+          hasAnyResponse = true;
+        }
+      }
+      if (!hasAnyResponse) {
+        // Only notifications/responses => 202 no body
+        return c.text('', 202);
+      }
+      return c.json(results, 200);
+    }
+
+    // Single object
+    const singleRes = await processOne(input);
+    if (singleRes === null || typeof singleRes?.id === 'undefined') {
+      // Notification (no response expected)
+      return c.text('', 202);
+    }
+    return c.json(singleRes, 200);
+  }
+
+  // POST /mcp (primary MCP endpoint)
+  app.post('/mcp', async c => {
+    return handleJsonRpcRequest(c);
+  });
+
+  // GET /mcp (no SSE yet) -> 405 Method Not Allowed
+  app.get('/mcp', c => {
+    c.header('Allow', 'POST');
+    return c.text('Method Not Allowed', 405);
+  });
+
+  // Back-compat: also accept POST / as MCP endpoint
+  app.post('/', async c => {
+    return handleJsonRpcRequest(c);
   });
 
   // Server status endpoint
