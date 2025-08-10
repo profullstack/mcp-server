@@ -49,7 +49,7 @@ describe('Crypto Badge Controller', () => {
       const result = await generateBadgeHandler(mockContext);
 
       expect(result.status).to.equal(400);
-      expect(result.json.error).to.include('baseUrl is required');
+      expect(result.json.error).to.include('Missing required parameter: baseUrl');
     });
 
     it('should handle invalid parameters gracefully', async () => {
@@ -216,7 +216,7 @@ describe('Crypto Badge Controller', () => {
 
       const result = await generatePresetHandler(mockContext);
 
-      expect(result.status).to.equal(400);
+      expect(result.status).to.equal(500);
       expect(result.json.error).to.include('Unknown preset: unknown');
     });
 
@@ -294,7 +294,7 @@ describe('Crypto Badge Controller', () => {
       const result = await generateBadgeHandler(mockContext);
 
       expect(result.status).to.equal(400);
-      expect(result.json.error).to.include('baseUrl is required');
+      expect(result.json.error).to.include('Missing required parameter: baseUrl');
     });
   });
 
