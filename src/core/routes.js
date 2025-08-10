@@ -118,8 +118,8 @@ export function setupCoreRoutes(app) {
       );
     }
 
-    // 2) tools/list - enumerate available tools
-    if (methodName === 'tools/list') {
+    // 2) tools.list and tools/list - enumerate available tools
+    if (methodName === 'tools/list' || methodName === 'tools.list') {
       try {
         const modules = await moduleLoader.getModulesInfo();
 
@@ -163,16 +163,235 @@ export function setupCoreRoutes(app) {
       }
     }
 
-    // 3) resources/list - optional, return empty list for now
-    if (methodName === 'resources/list') {
-      return c.json(
-        {
-          jsonrpc: '2.0',
-          id,
-          result: { resources: [] },
-        },
-        200
-      );
+    // 3) resources.list and resources/list - enumerate available resources from mcp_resources
+    if (methodName === 'resources/list' || methodName === 'resources.list') {
+      try {
+        const rootDir = path.resolve(__dirname, '..', '..', 'mcp_resources');
+        const resources = [];
+
+        if (fs.existsSync(rootDir)) {
+          const modules = fs
+            .readdirSync(rootDir, { withFileTypes: true })
+            .filter(d => d.isDirectory())
+            .map(d => d.name);
+
+          for (const mod of modules) {
+            const base = path.join(rootDir, mod);
+
+            // info.json resource
+            const infoPath = path.join(base, 'info.json');
+            if (fs.existsSync(infoPath)) {
+              try {
+                const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+                resources.push({
+                  uri: `resource://${mod}/info`,
+                  name: info.name || `${mod} info`,
+                  description: info.description || `Information resource for ${mod} module`,
+                  mimeType: 'application/json',
+                });
+              } catch {
+                resources.push({
+                  uri: `resource://${mod}/info`,
+                  name: `${mod} info`,
+                  description: `Information resource for ${mod} module`,
+                  mimeType: 'application/json',
+                });
+              }
+            }
+
+            // docs directory resource (list files)
+            const docsLink = path.join(base, 'docs');
+            if (fs.existsSync(docsLink)) {
+              resources.push({
+                uri: `resource://${mod}/docs`,
+                name: `${mod} docs`,
+                description: `Documentation symlink for ${mod} module`,
+                mimeType: 'application/json',
+              });
+            }
+
+            // examples directory resource (list files)
+            const examplesLink = path.join(base, 'examples');
+            if (fs.existsSync(examplesLink)) {
+              resources.push({
+                uri: `resource://${mod}/examples`,
+                name: `${mod} examples`,
+                description: `Examples symlink for ${mod} module`,
+                mimeType: 'application/json',
+              });
+            }
+          }
+        }
+
+        return c.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            result: { resources },
+          },
+          200
+        );
+      } catch (error) {
+        return c.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            error: {
+              code: -32010,
+              message: error?.message || 'Failed to list resources',
+            },
+          },
+          200
+        );
+      }
+    }
+
+    // 4) resources.read and resources/read - fetch a specific resource
+    if (methodName === 'resources/read' || methodName === 'resources.read') {
+      try {
+        const params = payload?.params ?? {};
+        const uri = params?.uri;
+        if (!uri || typeof uri !== 'string') {
+          return c.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32602, message: 'Invalid params: "uri" must be a string' },
+            },
+            200
+          );
+        }
+
+        // Parse resource://<module>/<kind>
+        const prefix = 'resource://';
+        if (!uri.startsWith(prefix)) {
+          return c.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32602, message: 'Invalid resource URI scheme' },
+            },
+            200
+          );
+        }
+
+        const rest = uri.slice(prefix.length);
+        const [mod, kind] = rest.split('/');
+        if (!mod || !kind) {
+          return c.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              error: { code: -32602, message: 'Invalid resource URI format' },
+            },
+            200
+          );
+        }
+
+        const base = path.resolve(__dirname, '..', '..', 'mcp_resources', mod);
+
+        if (kind === 'info') {
+          const infoPath = path.join(base, 'info.json');
+          if (!fs.existsSync(infoPath)) {
+            return c.json(
+              {
+                jsonrpc: '2.0',
+                id,
+                error: { code: -32011, message: 'Resource not found' },
+              },
+              200
+            );
+          }
+          const data = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+          return c.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              result: {
+                uri,
+                mimeType: 'application/json',
+                data,
+              },
+            },
+            200
+          );
+        }
+
+        // docs or examples: return a JSON listing of file paths within the symlinked directory
+        if (kind === 'docs' || kind === 'examples') {
+          const dirPath = path.join(base, kind);
+          if (!fs.existsSync(dirPath)) {
+            return c.json(
+              {
+                jsonrpc: '2.0',
+                id,
+                error: { code: -32011, message: 'Resource not found' },
+              },
+              200
+            );
+          }
+
+          // Recursively list files, limit to a simple listing (relative paths)
+          const listFiles = dir => {
+            const out = [];
+            const walk = rel => {
+              const abs = path.join(dir, rel);
+              const entries = fs.readdirSync(abs, { withFileTypes: true });
+              for (const e of entries) {
+                const nextRel = path.join(rel, e.name);
+                if (e.isDirectory()) {
+                  walk(nextRel);
+                } else {
+                  out.push(nextRel);
+                }
+              }
+            };
+            walk('.');
+            return out;
+          };
+
+          const files = listFiles(dirPath);
+
+          return c.json(
+            {
+              jsonrpc: '2.0',
+              id,
+              result: {
+                uri,
+                mimeType: 'application/json',
+                data: {
+                  directory: kind,
+                  module: mod,
+                  files,
+                },
+              },
+            },
+            200
+          );
+        }
+
+        // Unknown kind
+        return c.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            error: { code: -32601, message: 'Resource kind not supported' },
+          },
+          200
+        );
+      } catch (error) {
+        return c.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            error: {
+              code: -32012,
+              message: error?.message || 'Failed to read resource',
+            },
+          },
+          200
+        );
+      }
     }
 
     // Unknown method
