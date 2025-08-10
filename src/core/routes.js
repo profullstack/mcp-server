@@ -58,13 +58,14 @@ export function setupCoreRoutes(app) {
     try {
       payload = await c.req.json();
     } catch (e) {
+      // JSON parse error should still return HTTP 200 with JSON-RPC error
       return c.json(
         {
           jsonrpc: '2.0',
           id: null,
           error: { code: -32700, message: 'Parse error' },
         },
-        400
+        200
       );
     }
 
@@ -78,19 +79,24 @@ export function setupCoreRoutes(app) {
           id,
           error: { code: -32600, message: 'Invalid Request' },
         },
-        400
+        200
       );
     }
 
-    // Only support "initialize" at root per MCP spec
-    if (payload?.method !== 'initialize') {
+    // Normalize method name to be resilient to casing
+    const methodName = String(payload?.method ?? '').toLowerCase();
+
+    // Support initialize handshake (be tolerant of common aliases)
+    const supportedMethods = new Set(['initialize', 'handshake', 'initialize_session']);
+    if (!supportedMethods.has(methodName)) {
+      // Return JSON-RPC error with HTTP 200 to satisfy clients that expect a 200 transport
       return c.json(
         {
           jsonrpc: '2.0',
           id,
           error: { code: -32601, message: 'Method not found' },
         },
-        404
+        200
       );
     }
 
@@ -100,19 +106,24 @@ export function setupCoreRoutes(app) {
         name: 'MCP Server',
         version: version,
       },
+      // MCP clients (e.g., RooCode) expect a protocolVersion string
       protocolVersion: '2024-11-05',
+      // Capabilities must be objects (not booleans)
       capabilities: {
         tools: {}, // /tools endpoints provided by modules
-        prompts: {}, // not implemented here but schema expects object
+        prompts: {}, // not implemented; empty object satisfies schema
         resources: {}, // /resources exists (currently empty)
       },
     };
 
-    return c.json({
-      jsonrpc: '2.0',
-      id,
-      result,
-    });
+    return c.json(
+      {
+        jsonrpc: '2.0',
+        id,
+        result,
+      },
+      200
+    );
   });
 
   // Server status endpoint
