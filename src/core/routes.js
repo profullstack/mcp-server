@@ -295,7 +295,15 @@ export function setupCoreRoutes(app) {
               return { jsonrpc: '2.0', id, error: { code: -32011, message: 'Resource not found' } };
             }
             const data = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
-            return { jsonrpc: '2.0', id, result: { uri, mimeType: 'application/json', data } };
+            const text = JSON.stringify(data, null, 2);
+            return {
+              jsonrpc: '2.0',
+              id,
+              result: {
+                uri,
+                contents: [{ mimeType: 'application/json', text }],
+              },
+            };
           }
           if (kind === 'docs' || kind === 'examples') {
             const dirPath = path.join(base, kind);
@@ -320,13 +328,13 @@ export function setupCoreRoutes(app) {
               return out;
             };
             const files = listFiles(dirPath);
+            const data = { directory: kind, module: mod, files };
             return {
               jsonrpc: '2.0',
               id,
               result: {
                 uri,
-                mimeType: 'application/json',
-                data: { directory: kind, module: mod, files },
+                contents: [{ mimeType: 'application/json', text: JSON.stringify(data, null, 2) }],
               },
             };
           }
@@ -1044,8 +1052,7 @@ export function setupCoreRoutes(app) {
         const data = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
         return c.json({
           uri: `resource://${mod}/info`,
-          mimeType: 'application/json',
-          data,
+          contents: [{ mimeType: 'application/json', text: JSON.stringify(data, null, 2) }],
         });
       }
 
@@ -1077,16 +1084,24 @@ export function setupCoreRoutes(app) {
           const files = listFilesFrom(fallbackDir);
           return c.json({
             uri: `resource://${mod}/${kind}`,
-            mimeType: 'application/json',
-            data: { directory: kind, module: mod, files },
+            contents: [
+              {
+                mimeType: 'application/json',
+                text: JSON.stringify({ directory: kind, module: mod, files }, null, 2),
+              },
+            ],
           });
         } else if (fs.existsSync(readmePath)) {
           // Single-file fallback to README.md
           const files = ['README.md'];
           return c.json({
             uri: `resource://${mod}/${kind}`,
-            mimeType: 'application/json',
-            data: { directory: kind, module: mod, files },
+            contents: [
+              {
+                mimeType: 'application/json',
+                text: JSON.stringify({ directory: kind, module: mod, files }, null, 2),
+              },
+            ],
           });
         }
 
@@ -1118,8 +1133,12 @@ export function setupCoreRoutes(app) {
 
       return c.json({
         uri: `resource://${mod}/${kind}`,
-        mimeType: 'application/json',
-        data: { directory: kind, module: mod, files },
+        contents: [
+          {
+            mimeType: 'application/json',
+            text: JSON.stringify({ directory: kind, module: mod, files }, null, 2),
+          },
+        ],
       });
     } catch (error) {
       return c.json(
