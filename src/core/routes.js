@@ -100,10 +100,11 @@ export function setupCoreRoutes(app) {
         name: 'MCP Server',
         version: version,
       },
+      protocolVersion: '2024-11-05',
       capabilities: {
-        tools: true, // /tools endpoints provided by modules
-        prompts: false, // not implemented here
-        resources: true, // /resources exists (currently empty)
+        tools: {}, // /tools endpoints provided by modules
+        prompts: {}, // not implemented here but schema expects object
+        resources: {}, // /resources exists (currently empty)
       },
     };
 
