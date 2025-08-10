@@ -301,7 +301,7 @@ export function setupCoreRoutes(app) {
               id,
               result: {
                 uri,
-                contents: [{ mimeType: 'application/json', text }],
+                contents: [{ uri: `${uri}#info`, mimeType: 'application/json', text }],
               },
             };
           }
@@ -334,7 +334,13 @@ export function setupCoreRoutes(app) {
               id,
               result: {
                 uri,
-                contents: [{ mimeType: 'application/json', text: JSON.stringify(data, null, 2) }],
+                contents: [
+                  {
+                    uri: `${uri}#listing`,
+                    mimeType: 'application/json',
+                    text: JSON.stringify(data, null, 2),
+                  },
+                ],
               },
             };
           }
@@ -1052,7 +1058,13 @@ export function setupCoreRoutes(app) {
         const data = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
         return c.json({
           uri: `resource://${mod}/info`,
-          contents: [{ mimeType: 'application/json', text: JSON.stringify(data, null, 2) }],
+          contents: [
+            {
+              uri: `resource://${mod}/info#info`,
+              mimeType: 'application/json',
+              text: JSON.stringify(data, null, 2),
+            },
+          ],
         });
       }
 
@@ -1086,6 +1098,7 @@ export function setupCoreRoutes(app) {
             uri: `resource://${mod}/${kind}`,
             contents: [
               {
+                uri: `resource://${mod}/${kind}#listing`,
                 mimeType: 'application/json',
                 text: JSON.stringify({ directory: kind, module: mod, files }, null, 2),
               },
@@ -1098,6 +1111,7 @@ export function setupCoreRoutes(app) {
             uri: `resource://${mod}/${kind}`,
             contents: [
               {
+                uri: `resource://${mod}/${kind}#listing`,
                 mimeType: 'application/json',
                 text: JSON.stringify({ directory: kind, module: mod, files }, null, 2),
               },
@@ -1135,6 +1149,7 @@ export function setupCoreRoutes(app) {
         uri: `resource://${mod}/${kind}`,
         contents: [
           {
+            uri: `resource://${mod}/${kind}#listing`,
             mimeType: 'application/json',
             text: JSON.stringify({ directory: kind, module: mod, files }, null, 2),
           },
