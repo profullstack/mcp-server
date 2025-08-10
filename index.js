@@ -20,16 +20,16 @@ setupMiddleware(app);
 setupCoreRoutes(app);
 
 // Load and register all modules
-loadModules(app);
+await loadModules(app);
 
 // Start the server
 const PORT = process.env.PORT || config.server.port || 3000;
-const HOST = config.server.host || 'localhost';
+const HOST = process.env.HOST || config.server.host || '0.0.0.0';
 
 serve({
   fetch: app.fetch,
   port: PORT,
-  hostname: HOST
+  hostname: HOST,
 });
 
 logger.info(`MCP server is running at http://${HOST}:${PORT}`);

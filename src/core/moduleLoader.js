@@ -1,13 +1,34 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-// config is used for module directory configuration
-// eslint-disable-next-line no-unused-vars
 import { config } from './config.js';
 import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Resolve the modules directory using config with sensible fallbacks
+function resolveModulesDir() {
+  try {
+    const configuredDir = config?.modules?.directory;
+    // Base directory is project root relative to this file: ../../
+    const projectRoot = path.resolve(__dirname, '..', '..');
+
+    if (configuredDir && configuredDir.trim() !== '') {
+      // If absolute path, use as-is; if relative, resolve from project root
+      const candidate = path.isAbsolute(configuredDir)
+        ? configuredDir
+        : path.resolve(projectRoot, configuredDir);
+      return candidate;
+    }
+
+    // Fallback to default location within repo
+    return path.resolve(projectRoot, 'mcp_modules');
+  } catch {
+    // Last-resort fallback
+    return path.resolve(__dirname, '..', '..', 'mcp_modules');
+  }
+}
 
 // In-memory module state
 // In a production environment, consider using a more robust state management solution
@@ -21,7 +42,7 @@ export const moduleState = {
  */
 export async function loadModules(app) {
   try {
-    const modulesDir = path.resolve(__dirname, '..', '..', 'mcp_modules');
+    const modulesDir = resolveModulesDir();
 
     // Check if modules directory exists
     if (!fs.existsSync(modulesDir)) {
@@ -36,7 +57,7 @@ export async function loadModules(app) {
       .map(dirent => dirent.name);
 
     if (moduleDirs.length === 0) {
-      logger.info('No modules found to load');
+      logger.warn(`No modules found to load in: ${modulesDir}`);
       return;
     }
 
@@ -57,18 +78,18 @@ export async function loadModules(app) {
         // Import the module
         const moduleUrl = `file://${indexPath}`;
         // Use the global.importModule function if it exists (for testing)
-        const module = global.importModule
+        const mod = global.importModule
           ? await global.importModule(indexPath)
           : await import(moduleUrl);
 
         // Check if the module has a register function
-        if (typeof module.register !== 'function') {
+        if (typeof mod.register !== 'function') {
           logger.warn(`Module ${moduleDir} has no register function, skipping`);
           continue;
         }
 
         // Register the module with the app
-        await module.register(app);
+        await mod.register(app);
         logger.info(`Successfully loaded module: ${moduleDir}`);
       } catch (error) {
         logger.error(`Error loading module ${moduleDir}: ${error.message}`);
@@ -90,7 +111,7 @@ export async function getModulesInfo() {
       return global.testOverrides.moduleLoader.getModulesInfo();
     }
 
-    const modulesDir = path.resolve(__dirname, '..', '..', 'mcp_modules');
+    const modulesDir = resolveModulesDir();
 
     if (!fs.existsSync(modulesDir)) {
       return [];

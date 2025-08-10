@@ -24,7 +24,7 @@ export async function register(app) {
   logger.info('Registering template module');
 
   // Basic module info endpoint
-  app.get('/template', c => {
+  app.get('/template', (c) => {
     return c.json({
       module: 'template',
       status: 'active',
@@ -42,7 +42,7 @@ export async function register(app) {
   app.post('/template/items/:id/process', processItem);
 
   // Register MCP tool
-  app.get('/tools/template/info', c => {
+  app.get('/tools/template/info', (c) => {
     return c.json({
       name: 'template',
       description: 'Perform operations on template items',
@@ -67,7 +67,7 @@ export async function register(app) {
   });
 
   // Register MCP tool endpoint
-  app.post('/tools/template', async c => {
+  app.post('/tools/template', async (c) => {
     try {
       const params = await c.req.json();
 
@@ -134,7 +134,7 @@ export async function register(app) {
   });
 
   // Register the module info endpoint
-  app.get('/modules/template', c => {
+  app.get('/modules/template', (c) => {
     return c.json(metadata);
   });
 

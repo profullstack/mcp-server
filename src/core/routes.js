@@ -52,6 +52,29 @@ export function setupCoreRoutes(app) {
     });
   });
 
+  // MCP Root endpoint (POST)
+  app.post('/', async c => {
+    // Get module information
+    const modules = await moduleLoader.getModulesInfo();
+
+    // Create a summary of modules
+    const modulesSummary = modules.map(m => ({
+      name: m.name,
+      directoryName: m.directoryName,
+      version: m.version,
+      description: m.description,
+      author: m.author,
+      tools: m.tools || [],
+    }));
+
+    return c.json({
+      name: 'MCP Server',
+      version: version,
+      status: 'running',
+      modules: modulesSummary,
+    });
+  });
+
   // Server status endpoint
   app.get('/status', c => {
     // For tests, we need to handle the case where the active model is set directly
@@ -450,11 +473,34 @@ export function setupCoreRoutes(app) {
 
   // Tools and Resources (placeholder endpoints)
 
-  // List available tools
-  app.get('/tools', c => {
-    return c.json({
-      tools: [], // To be populated by modules
-    });
+  // List available tools (aggregated from modules metadata)
+  app.get('/tools', async c => {
+    try {
+      const modules = await moduleLoader.getModulesInfo();
+      const tools = modules.flatMap(m => {
+        const moduleTools = Array.isArray(m.tools) ? m.tools : [];
+        return moduleTools.map(t => ({
+          name: typeof t === 'string' ? t : (t?.name ?? String(t)),
+          module: m.name,
+          directoryName: m.directoryName,
+          endpoints: Array.isArray(m.endpoints)
+            ? m.endpoints.filter(e => e?.path?.includes('/tools/'))
+            : [],
+        }));
+      });
+
+      return c.json({ tools });
+    } catch (error) {
+      return c.json(
+        {
+          error: {
+            code: 'tools_list_failed',
+            message: error.message || 'Failed to list tools',
+          },
+        },
+        500
+      );
+    }
   });
 
   // List available resources
