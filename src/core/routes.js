@@ -52,26 +52,65 @@ export function setupCoreRoutes(app) {
     });
   });
 
-  // MCP Root endpoint (POST)
+  // MCP Root endpoint (POST) - JSON-RPC 2.0 "initialize" handshake
   app.post('/', async c => {
-    // Get module information
-    const modules = await moduleLoader.getModulesInfo();
+    let payload;
+    try {
+      payload = await c.req.json();
+    } catch (e) {
+      return c.json(
+        {
+          jsonrpc: '2.0',
+          id: null,
+          error: { code: -32700, message: 'Parse error' },
+        },
+        400
+      );
+    }
 
-    // Create a summary of modules
-    const modulesSummary = modules.map(m => ({
-      name: m.name,
-      directoryName: m.directoryName,
-      version: m.version,
-      description: m.description,
-      author: m.author,
-      tools: m.tools || [],
-    }));
+    const id = payload?.id ?? null;
+
+    // Validate JSON-RPC envelope
+    if (payload?.jsonrpc !== '2.0' || typeof payload !== 'object') {
+      return c.json(
+        {
+          jsonrpc: '2.0',
+          id,
+          error: { code: -32600, message: 'Invalid Request' },
+        },
+        400
+      );
+    }
+
+    // Only support "initialize" at root per MCP spec
+    if (payload?.method !== 'initialize') {
+      return c.json(
+        {
+          jsonrpc: '2.0',
+          id,
+          error: { code: -32601, message: 'Method not found' },
+        },
+        404
+      );
+    }
+
+    // Build MCP initialize result
+    const result = {
+      serverInfo: {
+        name: 'MCP Server',
+        version: version,
+      },
+      capabilities: {
+        tools: true, // /tools endpoints provided by modules
+        prompts: false, // not implemented here
+        resources: true, // /resources exists (currently empty)
+      },
+    };
 
     return c.json({
-      name: 'MCP Server',
-      version: version,
-      status: 'running',
-      modules: modulesSummary,
+      jsonrpc: '2.0',
+      id,
+      result,
     });
   });
 
