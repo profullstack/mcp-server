@@ -86,41 +86,101 @@ export function setupCoreRoutes(app) {
     // Normalize method name to be resilient to casing
     const methodName = String(payload?.method ?? '').toLowerCase();
 
-    // Support initialize handshake (be tolerant of common aliases)
-    const supportedMethods = new Set(['initialize', 'handshake', 'initialize_session']);
-    if (!supportedMethods.has(methodName)) {
-      // Return JSON-RPC error with HTTP 200 to satisfy clients that expect a 200 transport
+    // JSON-RPC routing for MCP methods
+    // 1) initialize / handshake
+    if (
+      methodName === 'initialize' ||
+      methodName === 'handshake' ||
+      methodName === 'initialize_session'
+    ) {
+      const result = {
+        serverInfo: {
+          name: 'MCP Server',
+          version: version,
+        },
+        // MCP clients (e.g., RooCode) expect a protocolVersion string
+        protocolVersion: '2024-11-05',
+        // Capabilities must be objects (not booleans)
+        capabilities: {
+          tools: {}, // /tools endpoints provided by modules
+          prompts: {}, // not implemented; empty object satisfies schema
+          resources: {}, // /resources exists (currently empty)
+        },
+      };
+
       return c.json(
         {
           jsonrpc: '2.0',
           id,
-          error: { code: -32601, message: 'Method not found' },
+          result,
         },
         200
       );
     }
 
-    // Build MCP initialize result
-    const result = {
-      serverInfo: {
-        name: 'MCP Server',
-        version: version,
-      },
-      // MCP clients (e.g., RooCode) expect a protocolVersion string
-      protocolVersion: '2024-11-05',
-      // Capabilities must be objects (not booleans)
-      capabilities: {
-        tools: {}, // /tools endpoints provided by modules
-        prompts: {}, // not implemented; empty object satisfies schema
-        resources: {}, // /resources exists (currently empty)
-      },
-    };
+    // 2) tools/list - enumerate available tools
+    if (methodName === 'tools/list') {
+      try {
+        const modules = await moduleLoader.getModulesInfo();
 
+        // Build MCP tool descriptors. Minimal schema to satisfy discovery.
+        const tools = modules.flatMap(m => {
+          const moduleTools = Array.isArray(m.tools) ? m.tools : [];
+          return moduleTools.map(t => {
+            const name = typeof t === 'string' ? t : (t?.name ?? String(t));
+            return {
+              name,
+              description: m.description || `Tool from module ${m.name}`,
+              inputSchema: {
+                type: 'object',
+                // Unknown per-module parameters at discovery time; allow any args
+                additionalProperties: true,
+              },
+            };
+          });
+        });
+
+        return c.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            result: { tools },
+          },
+          200
+        );
+      } catch (error) {
+        return c.json(
+          {
+            jsonrpc: '2.0',
+            id,
+            error: {
+              code: -32000,
+              message: error?.message || 'Failed to list tools',
+            },
+          },
+          200
+        );
+      }
+    }
+
+    // 3) resources/list - optional, return empty list for now
+    if (methodName === 'resources/list') {
+      return c.json(
+        {
+          jsonrpc: '2.0',
+          id,
+          result: { resources: [] },
+        },
+        200
+      );
+    }
+
+    // Unknown method
     return c.json(
       {
         jsonrpc: '2.0',
         id,
-        result,
+        error: { code: -32601, message: 'Method not found' },
       },
       200
     );
