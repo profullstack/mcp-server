@@ -496,12 +496,21 @@ describe('Core Routes', () => {
   });
 
   describe('GET /resources', () => {
-    it('should return empty resources list', async () => {
+    it('should return aggregated resources list', async () => {
       const response = await request.get('/resources');
 
       expect(response.status).to.equal(200);
       expect(response.body).to.be.an('object');
-      expect(response.body.resources).to.be.an('array').that.is.empty;
+      expect(response.body.resources).to.be.an('array');
+      // Validate shape rather than count for determinism across environments
+      if (response.body.resources.length > 0) {
+        const r = response.body.resources[0];
+        expect(r).to.be.an('object');
+        expect(r).to.have.property('uri');
+        expect(r).to.have.property('name');
+        expect(r).to.have.property('description');
+        expect(r).to.have.property('mimeType');
+      }
     });
   });
 

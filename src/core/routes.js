@@ -833,11 +833,257 @@ export function setupCoreRoutes(app) {
     }
   });
 
-  // List available resources
-  app.get('/resources', c => {
-    return c.json({
-      resources: [], // To be populated by modules
-    });
+  // List available resources (HTTP GET)
+  app.get('/resources', async c => {
+    try {
+      const rootDir = path.resolve(__dirname, '..', '..', 'mcp_resources');
+      const resources = [];
+
+      if (fs.existsSync(rootDir)) {
+        const modules = fs
+          .readdirSync(rootDir, { withFileTypes: true })
+          .filter(d => d.isDirectory())
+          .map(d => d.name);
+
+        for (const mod of modules) {
+          const base = path.join(rootDir, mod);
+
+          // info.json resource
+          const infoPath = path.join(base, 'info.json');
+          if (fs.existsSync(infoPath)) {
+            let name = `${mod} info`;
+            let description = `Information resource for ${mod} module`;
+            try {
+              const info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+              name = info.name || name;
+              description = info.description || description;
+            } catch (err) {
+              // ignore invalid JSON in resources aggregation
+              // eslint-disable-next-line no-console
+              console.warn?.('Skipping invalid info.json for %s: %s', mod, err?.message);
+            }
+            resources.push({
+              uri: `resource://${mod}/info`,
+              name,
+              description,
+              mimeType: 'application/json',
+            });
+          }
+
+          // docs directory resource (list files)
+          const docsLink = path.join(base, 'docs');
+          if (fs.existsSync(docsLink)) {
+            resources.push({
+              uri: `resource://${mod}/docs`,
+              name: `${mod} docs`,
+              description: `Documentation symlink for ${mod} module`,
+              mimeType: 'application/json',
+            });
+          }
+
+          // examples directory resource (list files)
+          const examplesLink = path.join(base, 'examples');
+          if (fs.existsSync(examplesLink)) {
+            resources.push({
+              uri: `resource://${mod}/examples`,
+              name: `${mod} examples`,
+              description: `Examples symlink for ${mod} module`,
+              mimeType: 'application/json',
+            });
+          }
+        }
+      }
+
+      return c.json({ resources });
+    } catch (error) {
+      return c.json(
+        {
+          error: {
+            code: 'resources_list_failed',
+            message: error.message || 'Failed to list resources',
+          },
+        },
+        500
+      );
+    }
+  });
+
+  // Module-specific resource summary (e.g. /resources/readme-badges?list=true)
+  app.get('/resources/:module', async c => {
+    try {
+      const { module: mod } = c.req.param();
+      const base = path.resolve(__dirname, '..', '..', 'mcp_resources', mod);
+
+      if (!fs.existsSync(base) || !fs.statSync(base).isDirectory()) {
+        return c.json(
+          {
+            error: {
+              code: 'resource_module_not_found',
+              message: `Resource module ${mod} not found`,
+            },
+          },
+          404
+        );
+      }
+
+      const infoPath = path.join(base, 'info.json');
+      const docsPath = path.join(base, 'docs');
+      const examplesPath = path.join(base, 'examples');
+
+      let info = null;
+      if (fs.existsSync(infoPath)) {
+        try {
+          info = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+        } catch (err) {
+          // ignore invalid JSON in resources aggregation
+          // eslint-disable-next-line no-console
+          console.warn?.('Skipping invalid info.json for %s: %s', mod, err?.message);
+        }
+      }
+
+      const listParam = c.req.query('list') === 'true';
+      const listFiles = dir => {
+        const out = [];
+        const walk = rel => {
+          const abs = path.join(dir, rel);
+          const entries = fs.readdirSync(abs, { withFileTypes: true });
+          for (const e of entries) {
+            const nextRel = path.join(rel, e.name);
+            if (e.isDirectory()) {
+              walk(nextRel);
+            } else {
+              out.push(nextRel);
+            }
+          }
+        };
+        walk('.');
+        return out;
+      };
+
+      const available = {
+        info: fs.existsSync(infoPath),
+        docs: fs.existsSync(docsPath),
+        examples: fs.existsSync(examplesPath),
+      };
+
+      const uris = [];
+      if (available.info) uris.push(`resource://${mod}/info`);
+      if (available.docs) uris.push(`resource://${mod}/docs`);
+      if (available.examples) uris.push(`resource://${mod}/examples`);
+
+      const payload = {
+        module: mod,
+        available,
+        uris,
+      };
+
+      if (info) payload.info = info;
+      if (listParam) {
+        if (available.docs) payload.docs = listFiles(docsPath);
+        if (available.examples) payload.examples = listFiles(examplesPath);
+      }
+
+      return c.json(payload);
+    } catch (error) {
+      return c.json(
+        {
+          error: {
+            code: 'resource_module_failed',
+            message: error.message || 'Failed to read resource module',
+          },
+        },
+        500
+      );
+    }
+  });
+
+  // Read a specific resource kind via HTTP (info/docs/examples)
+  app.get('/resources/:module/:kind', async c => {
+    try {
+      const { module: mod, kind } = c.req.param();
+      const base = path.resolve(__dirname, '..', '..', 'mcp_resources', mod);
+
+      if (!['info', 'docs', 'examples'].includes(kind)) {
+        return c.json(
+          {
+            error: { code: 'resource_kind_not_supported', message: 'Resource kind not supported' },
+          },
+          400
+        );
+      }
+
+      if (!fs.existsSync(base)) {
+        return c.json(
+          {
+            error: {
+              code: 'resource_module_not_found',
+              message: `Resource module ${mod} not found`,
+            },
+          },
+          404
+        );
+      }
+
+      if (kind === 'info') {
+        const infoPath = path.join(base, 'info.json');
+        if (!fs.existsSync(infoPath)) {
+          return c.json(
+            { error: { code: 'resource_not_found', message: 'Resource not found' } },
+            404
+          );
+        }
+        const data = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
+        return c.json({
+          uri: `resource://${mod}/info`,
+          mimeType: 'application/json',
+          data,
+        });
+      }
+
+      const dirPath = path.join(base, kind);
+      if (!fs.existsSync(dirPath)) {
+        return c.json(
+          { error: { code: 'resource_not_found', message: 'Resource not found' } },
+          404
+        );
+      }
+
+      const listFiles = dir => {
+        const out = [];
+        const walk = rel => {
+          const abs = path.join(dir, rel);
+          const entries = fs.readdirSync(abs, { withFileTypes: true });
+          for (const e of entries) {
+            const nextRel = path.join(rel, e.name);
+            if (e.isDirectory()) {
+              walk(nextRel);
+            } else {
+              out.push(nextRel);
+            }
+          }
+        };
+        walk('.');
+        return out;
+      };
+
+      const files = listFiles(dirPath);
+
+      return c.json({
+        uri: `resource://${mod}/${kind}`,
+        mimeType: 'application/json',
+        data: { directory: kind, module: mod, files },
+      });
+    } catch (error) {
+      return c.json(
+        {
+          error: {
+            code: 'resource_read_failed',
+            message: error.message || 'Failed to read resource',
+          },
+        },
+        500
+      );
+    }
   });
 
   // Error handling for undefined routes
