@@ -1,5 +1,11 @@
 # MCP Server (Model Context Protocol)
 
+<!-- readme-badges:start -->
+
+[![Node](https://img.shields.io/badge/Node-6DA55F.svg?logo=node.js&logoColor=fff&style=for-the-badge)](https://github.com/profullstack/mcp-server)
+
+<!-- readme-badges:end -->
+
 A generic, modular server for implementing the Model Context Protocol (MCP). This server provides a framework for controlling and interacting with various models through a standardized API.
 
 [![Crypto Payment](https://paybadge.profullstack.com/badge.svg)](https://paybadge.profullstack.com/?tickers=btc%2Ceth%2Csol%2Cusdc)
