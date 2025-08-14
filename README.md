@@ -522,6 +522,9 @@ const response = await fetch('http://localhost:3000/model/custom-model-name/infe
 - [MCP Interface](docs/mcp_interface.ts): TypeScript interface definitions for the MCP protocol.
 - [Architecture](docs/architecture.md): Overview of the MCP server architecture.
 
+<a href="https://glama.ai/mcp/servers/@profullstack/mcp-server">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@profullstack/mcp-server/badge" />
+
 ## License
 
 ISC
