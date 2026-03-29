@@ -10,6 +10,10 @@ A generic, modular server for implementing the Model Context Protocol (MCP). Thi
 
 [![Crypto Payment](https://paybadge.profullstack.com/badge.svg)](https://paybadge.profullstack.com/?tickers=btc%2Ceth%2Csol%2Cusdc)
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/profullstack-mcp-server).
+
 ## Features
 
 - Modular architecture for easy extension
