@@ -1,7 +1,36 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+const TLDX_BINARY = 'tldx';
+
+// Allowlists used to defend the tldx invocation against OS command injection
+// (CWE-78). Inputs that fail these checks are rejected before reaching the
+// child process; arguments are passed as an array to execFile so /bin/sh is
+// never involved and shell metacharacters cannot be interpreted.
+const KEYWORD_PATTERN = /^[a-zA-Z0-9-]{1,63}$/;
+const DOMAIN_PATTERN = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const TLD_PATTERN = /^[a-zA-Z]{2,63}$/;
+const PRESET_PATTERN = /^[a-zA-Z0-9_-]{1,32}$/;
+const ALLOWED_FORMATS = new Set(['text', 'json', 'json-stream', 'json-array', 'csv']);
+
+function assertSafeList(values, pattern, fieldName) {
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new Error(`Invalid ${fieldName}: expected a non-empty array`);
+  }
+  for (const value of values) {
+    if (typeof value !== 'string' || !pattern.test(value)) {
+      throw new Error(`Invalid ${fieldName} value: ${JSON.stringify(value)}`);
+    }
+  }
+}
+
+function assertSafeScalar(value, pattern, fieldName) {
+  if (typeof value !== 'string' || !pattern.test(value)) {
+    throw new Error(`Invalid ${fieldName} value: ${JSON.stringify(value)}`);
+  }
+}
 
 /**
  * Domain Lookup Service
@@ -16,8 +45,8 @@ export const domainLookupService = {
    */
   async checkDomainAvailability(domains, options = {}) {
     try {
-      const command = this.buildTldxCommand(domains, options);
-      const { stdout, stderr } = await execAsync(command);
+      const args = this.buildTldxArgs(domains, options);
+      const { stdout, stderr } = await execFileAsync(TLDX_BINARY, args);
 
       if (stderr && !stdout) {
         throw new Error(`tldx command failed: ${stderr}`);
@@ -30,7 +59,7 @@ export const domainLookupService = {
         domains: parsedDomains,
         format: options.format || 'text',
         timestamp: new Date().toISOString(),
-        command,
+        command: [TLDX_BINARY, ...args].join(' '),
       };
     } catch (error) {
       throw new Error(`tldx command failed: ${error.message}`);
@@ -45,8 +74,8 @@ export const domainLookupService = {
    */
   async generateDomainSuggestions(keyword, options = {}) {
     try {
-      const command = this.buildTldxCommand([keyword], options);
-      const { stdout, stderr } = await execAsync(command);
+      const args = this.buildTldxArgs([keyword], options);
+      const { stdout, stderr } = await execFileAsync(TLDX_BINARY, args);
 
       if (stderr && !stdout) {
         throw new Error(`tldx command failed: ${stderr}`);
@@ -84,8 +113,7 @@ export const domainLookupService = {
    */
   async getTldPresets() {
     try {
-      const command = 'tldx show-tld-presets';
-      const { stdout, stderr } = await execAsync(command);
+      const { stdout, stderr } = await execFileAsync(TLDX_BINARY, ['show-tld-presets']);
 
       if (stderr && !stdout) {
         throw new Error(`Failed to get TLD presets: ${stderr}`);
@@ -111,8 +139,8 @@ export const domainLookupService = {
    */
   async bulkDomainCheck(keywords, options = {}) {
     try {
-      const command = this.buildTldxCommand(keywords, options);
-      const { stdout, stderr } = await execAsync(command);
+      const args = this.buildTldxArgs(keywords, options);
+      const { stdout, stderr } = await execFileAsync(TLDX_BINARY, args);
 
       if (stderr && !stdout) {
         throw new Error(`Bulk domain check failed: ${stderr}`);
@@ -134,55 +162,90 @@ export const domainLookupService = {
   },
 
   /**
-   * Build tldx command with options
-   * @param {string[]} keywords - Keywords to check
+   * Build tldx argument array with options.
+   *
+   * Returns a string[] suitable for execFile('tldx', args). Every
+   * user-controlled value is validated against an allowlist before being
+   * added so that shell metacharacters (or anything outside RFC 1035-style
+   * hostname syntax) cannot reach the binary. The intent is defense-in-depth
+   * — execFile already avoids /bin/sh, but rejecting bad input early gives a
+   * clear error and prevents passing nonsense flags to tldx.
+   *
+   * @param {string[]} keywords - Keywords or domains to pass to tldx
    * @param {Object} options - Command options
-   * @returns {string} Complete tldx command
+   * @returns {string[]} tldx argument array (excluding the binary name)
    */
-  buildTldxCommand(keywords, options = {}) {
-    let command = `tldx ${keywords.join(' ')}`;
+  buildTldxArgs(keywords, options = {}) {
+    // Keywords/domains may contain dots (e.g. "example.com"), so accept the
+    // domain pattern when a value contains a dot and the keyword pattern
+    // otherwise. Both reject shell metacharacters.
+    if (!Array.isArray(keywords) || keywords.length === 0) {
+      throw new Error('Invalid keywords: expected a non-empty array');
+    }
+    for (const value of keywords) {
+      if (typeof value !== 'string') {
+        throw new Error(`Invalid keyword value: ${JSON.stringify(value)}`);
+      }
+      const pattern = value.includes('.') ? DOMAIN_PATTERN : KEYWORD_PATTERN;
+      if (!pattern.test(value)) {
+        throw new Error(`Invalid keyword value: ${JSON.stringify(value)}`);
+      }
+    }
+
+    const args = [...keywords];
 
     if (options.prefixes?.length) {
-      command += ` --prefixes ${options.prefixes.join(',')}`;
+      assertSafeList(options.prefixes, KEYWORD_PATTERN, 'prefixes');
+      args.push('--prefixes', options.prefixes.join(','));
     }
 
     if (options.suffixes?.length) {
-      command += ` --suffixes ${options.suffixes.join(',')}`;
+      assertSafeList(options.suffixes, KEYWORD_PATTERN, 'suffixes');
+      args.push('--suffixes', options.suffixes.join(','));
     }
 
     if (options.tlds?.length) {
-      command += ` --tlds ${options.tlds.join(',')}`;
+      assertSafeList(options.tlds, TLD_PATTERN, 'tlds');
+      args.push('--tlds', options.tlds.join(','));
     }
 
     if (options.format) {
-      command += ` --format ${options.format}`;
+      if (!ALLOWED_FORMATS.has(options.format)) {
+        throw new Error(`Invalid format value: ${JSON.stringify(options.format)}`);
+      }
+      args.push('--format', options.format);
     }
 
     if (options.onlyAvailable) {
-      command += ' --only-available';
+      args.push('--only-available');
     }
 
-    if (options.maxDomainLength) {
-      command += ` --max-domain-length ${options.maxDomainLength}`;
+    if (options.maxDomainLength !== undefined && options.maxDomainLength !== null) {
+      const len = Number(options.maxDomainLength);
+      if (!Number.isInteger(len) || len < 1 || len > 253) {
+        throw new Error(`Invalid maxDomainLength value: ${JSON.stringify(options.maxDomainLength)}`);
+      }
+      args.push('--max-domain-length', String(len));
     }
 
     if (options.tldPreset) {
-      command += ` --tld-preset ${options.tldPreset}`;
+      assertSafeScalar(options.tldPreset, PRESET_PATTERN, 'tldPreset');
+      args.push('--tld-preset', options.tldPreset);
     }
 
     if (options.showStats) {
-      command += ' --show-stats';
+      args.push('--show-stats');
     }
 
     if (options.verbose) {
-      command += ' --verbose';
+      args.push('--verbose');
     }
 
     if (options.noColor) {
-      command += ' --no-color';
+      args.push('--no-color');
     }
 
-    return command;
+    return args;
   },
 
   /**
