@@ -7,7 +7,9 @@
   "scripts": {
     "test": "mocha test/**/*.test.js",
     "lint": "eslint src/ test/ --ext .js",
-    "lint:fix": "eslint src/ test/ --ext .js --fix"
+    "lint:fix": "eslint src/ test/ --ext .js --fix",
+    "postinstall": "npx @socketsecurity/socket-patch apply --silent --ecosystems npm",
+    "dependencies": "npx @socketsecurity/socket-patch apply --silent --ecosystems npm"
   },
   "keywords": [
     "mcp",
