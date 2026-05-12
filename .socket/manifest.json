@@ -1,0 +1,27 @@
+{
+  "patches": {
+    "pkg:npm/tar-fs@3.0.4": {
+      "uuid": "b91859e2-ca75-4fe1-8892-fdfd677cfd47",
+      "exportedAt": "Thu, 08 Jan 2026 20:18:08 GMT",
+      "files": {
+        "package/index.js": {
+          "beforeHash": "1263007ac16293589727bd73922aea714f42bd08c19cdb7b6ba409515ff0b73f",
+          "afterHash": "07fe19aac4aab8d78c9c1b6eefdcbd9af489cecacbebb06224a1f12de48a93a9"
+        }
+      },
+      "vulnerabilities": {
+        "GHSA-pq67-2wwv-3xjx": {
+          "cves": [
+            "CVE-2024-12905"
+          ],
+          "summary": "tar-fs Vulnerable to Link Following and Path Traversal via Extracting a Crafted tar File",
+          "severity": "HIGH",
+          "description": "An Improper Link Resolution Before File Access (\"Link Following\") and Improper Limitation of a Pathname to a Restricted Directory (\"Path Traversal\"). This vulnerability occurs when extracting a maliciously crafted tar file, which can result in unauthorized file writes or overwrites outside the intended extraction directory. The issue is associated with index.js in the tar-fs package.\n\nThis issue affects tar-fs: from 0.0.0 before 1.16.4, from 2.0.0 before 2.1.2, from 3.0.0 before 3.0.7.\n\n### PoC\n```javascript\n// Create a writable stream to extract the tar content\nconst extractStream = tarfs.extract('/', {\n    // We can ignore the file type checks to allow the extraction of the malicious file\n    ignore: (name) => false,\n});\n\n// Create a tar stream\nconst tarStream = tarfs.pack().on('error', (err) => {\n    throw err;\n});\n\n// Append the malicious entry to the tar stream\ntarStream.entry({ name: '/flag.txt', mode: 0o644 }, Buffer.from('This is a flag!'));\n\n// Finalize the tar stream\ntarStream.finalize();\n\n// Pipe the tar stream into the extract stream\ntarStream.pipe(extractStream);\n```"
+        }
+      },
+      "description": "",
+      "license": "MIT",
+      "tier": "free"
+    }
+  }
+}
