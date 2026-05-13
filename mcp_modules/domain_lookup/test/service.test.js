@@ -128,17 +128,21 @@ describe('Domain Lookup Service', () => {
     it('should reject keyword containing shell metacharacters', () => {
       expect(() =>
         domainLookupService.buildTldxArgs(['example.com; echo pwned > /tmp/x; #'])
-      ).to.throw(/Invalid keyword/);
+      ).to.throw(/Invalid keyword value:/);
     });
 
     it('should reject keyword with command substitution', () => {
-      expect(() => domainLookupService.buildTldxArgs(['$(id)'])).to.throw(/Invalid keyword/);
-      expect(() => domainLookupService.buildTldxArgs(['`id`'])).to.throw(/Invalid keyword/);
+      expect(() => domainLookupService.buildTldxArgs(['$(id)'])).to.throw(/Invalid keyword value:/);
+      expect(() => domainLookupService.buildTldxArgs(['`id`'])).to.throw(/Invalid keyword value:/);
     });
 
     it('should reject keyword with pipe or redirect', () => {
-      expect(() => domainLookupService.buildTldxArgs(['x | nc evil 80'])).to.throw(/Invalid keyword/);
-      expect(() => domainLookupService.buildTldxArgs(['x > /tmp/f'])).to.throw(/Invalid keyword/);
+      expect(() => domainLookupService.buildTldxArgs(['x | nc evil 80'])).to.throw(
+        /Invalid keyword value:/
+      );
+      expect(() => domainLookupService.buildTldxArgs(['x > /tmp/f'])).to.throw(
+        /Invalid keyword value:/
+      );
     });
 
     it('should reject prefixes/suffixes/tlds containing shell metacharacters', () => {
@@ -169,12 +173,21 @@ describe('Domain Lookup Service', () => {
       expect(() =>
         domainLookupService.buildTldxArgs(['safe'], { maxDomainLength: '20; ls' })
       ).to.throw(/Invalid maxDomainLength/);
+      expect(() => domainLookupService.buildTldxArgs(['safe'], { maxDomainLength: 0 })).to.throw(
+        /Invalid maxDomainLength/
+      );
+      expect(() => domainLookupService.buildTldxArgs(['safe'], { maxDomainLength: 9999 })).to.throw(
+        /Invalid maxDomainLength/
+      );
+    });
+
+    it('should accept boundary maxDomainLength values', () => {
       expect(() =>
-        domainLookupService.buildTldxArgs(['safe'], { maxDomainLength: 0 })
-      ).to.throw(/Invalid maxDomainLength/);
+        domainLookupService.buildTldxArgs(['safe'], { maxDomainLength: 1 })
+      ).to.not.throw();
       expect(() =>
-        domainLookupService.buildTldxArgs(['safe'], { maxDomainLength: 9999 })
-      ).to.throw(/Invalid maxDomainLength/);
+        domainLookupService.buildTldxArgs(['safe'], { maxDomainLength: 253 })
+      ).to.not.throw();
     });
 
     it('should reject empty keywords array', () => {
@@ -286,7 +299,7 @@ describe('Domain Lookup Service', () => {
     it('should throw error for invalid JSON', () => {
       expect(() => {
         domainLookupService.parseJsonOutput('invalid json');
-      }).to.throw('Failed to parse JSON output');
+      }).to.throw(/Failed to parse JSON output/);
     });
 
     it('should handle non-array JSON', () => {
@@ -318,11 +331,31 @@ describe('Domain Lookup Service', () => {
     it('should skip invalid JSON lines', () => {
       const output =
         '{"domain":"example.com","available":true}\ninvalid json\n{"domain":"test.org","available":true}';
-      const result = domainLookupService.parseJsonStreamOutput(output);
 
-      expect(result).to.have.length(2);
-      expect(result[0].domain).to.equal('example.com');
-      expect(result[1].domain).to.equal('test.org');
+      const originalConsoleError = console.error;
+      const originalConsoleWarn = console.warn;
+      const consoleErrorCalls = [];
+      const consoleWarnCalls = [];
+
+      console.error = (...args) => {
+        consoleErrorCalls.push(args);
+      };
+      console.warn = (...args) => {
+        consoleWarnCalls.push(args);
+      };
+
+      try {
+        const result = domainLookupService.parseJsonStreamOutput(output);
+
+        expect(result).to.have.length(2);
+        expect(result[0].domain).to.equal('example.com');
+        expect(result[1].domain).to.equal('test.org');
+        expect(consoleErrorCalls).to.have.length(0);
+        expect(consoleWarnCalls).to.have.length(0);
+      } finally {
+        console.error = originalConsoleError;
+        console.warn = originalConsoleWarn;
+      }
     });
 
     it('should handle empty output', () => {
