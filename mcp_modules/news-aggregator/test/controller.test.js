@@ -14,6 +14,7 @@ import {
   clearCache,
   getHealthStatus,
 } from '../src/controller.js';
+import { parsePositiveIntegerLimit } from '../src/limit.js';
 
 describe('NewsAggregatorController', () => {
   let mockContext;
@@ -246,8 +247,12 @@ describe('NewsAggregatorController', () => {
 
       await searchNews(mockContext);
 
-      expect(mockContext.json.calledWith({ error: 'Keywords parameter is required' }, 400)).to.be
-        .true;
+      expect(
+        mockContext.json.calledWith(
+          { error: 'Either keywords or tickers parameter is required' },
+          400
+        )
+      ).to.be.true;
     });
 
     it('should apply limit to search results', async () => {
@@ -271,8 +276,50 @@ describe('NewsAggregatorController', () => {
 
       await searchNews(mockContext);
 
-      // Verify that the response was called (we can't easily check the exact limit without more complex mocking)
-      expect(mockContext.json.called).to.be.true;
+      const response = mockContext.json.firstCall.args[0];
+      expect(response.articles).to.have.length(2);
+      expect(response.totalResults).to.equal(2);
+    });
+
+    it('should ignore malformed limit values', async () => {
+      const mockAggregatedResult = {
+        sources: [
+          {
+            source: 'Google News',
+            category: 'technology',
+            articles: [
+              { title: 'Article 1', publishedAt: '2024-01-01T12:00:00.000Z' },
+              { title: 'Article 2', publishedAt: '2024-01-01T11:00:00.000Z' },
+              { title: 'Article 3', publishedAt: '2024-01-01T10:00:00.000Z' },
+            ],
+          },
+        ],
+      };
+
+      mockContext.req.query.returns({ keywords: 'test', limit: '2abc' });
+      serviceStub.getAggregatedNews.resolves(mockAggregatedResult);
+      serviceStub.filterByKeywords.returns(mockAggregatedResult.sources[0].articles);
+
+      await searchNews(mockContext);
+
+      const response = mockContext.json.firstCall.args[0];
+      expect(response.articles).to.have.length(3);
+      expect(response.totalResults).to.equal(3);
+    });
+  });
+
+  describe('parsePositiveIntegerLimit', () => {
+    it('parses positive integer limits only', () => {
+      expect(parsePositiveIntegerLimit('2')).to.equal(2);
+      expect(parsePositiveIntegerLimit(3)).to.equal(3);
+    });
+
+    it('rejects malformed, zero, and decimal limits', () => {
+      expect(parsePositiveIntegerLimit('2abc')).to.equal(null);
+      expect(parsePositiveIntegerLimit('0')).to.equal(null);
+      expect(parsePositiveIntegerLimit('1.5')).to.equal(null);
+      expect(parsePositiveIntegerLimit('-1')).to.equal(null);
+      expect(parsePositiveIntegerLimit('')).to.equal(null);
     });
   });
 

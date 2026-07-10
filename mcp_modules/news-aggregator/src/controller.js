@@ -6,6 +6,7 @@
 
 import { newsAggregatorService } from './service.js';
 import { logger } from '../../../src/utils/logger.js';
+import { parsePositiveIntegerLimit } from './limit.js';
 
 /**
  * Get news from RSS feeds
@@ -311,8 +312,8 @@ export async function searchNews(c) {
 
     // Apply limit if specified
     if (limit) {
-      const limitNum = parseInt(limit, 10);
-      if (!isNaN(limitNum) && limitNum > 0) {
+      const limitNum = parsePositiveIntegerLimit(limit);
+      if (limitNum) {
         allArticles = allArticles.slice(0, limitNum);
       }
     }
