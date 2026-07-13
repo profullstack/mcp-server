@@ -6,7 +6,7 @@
  * web application security scanning capabilities.
  */
 
-import { join } from 'path';
+import { join, resolve, sep, dirname } from 'path';
 import { homedir } from 'os';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { spawn } from 'child_process';
@@ -441,14 +441,32 @@ export class ScannerService {
       // Verify scan exists
       this.getScanById(scanId);
       const format = options.format || 'json';
-      let destination = options.destination;
 
-      if (!destination) {
-        destination = join(this.dataDir, 'reports', `${scanId}-report.${format}`);
-        // Ensure the reports directory exists
-        const reportsDir = join(this.dataDir, 'reports');
-        if (!existsSync(reportsDir)) {
-          mkdirSync(reportsDir, { recursive: true });
+      // All reports are confined to this directory. Ensure it exists.
+      const reportsDir = resolve(join(this.dataDir, 'reports'));
+      if (!existsSync(reportsDir)) {
+        mkdirSync(reportsDir, { recursive: true });
+      }
+
+      let destination;
+      if (!options.destination) {
+        destination = join(reportsDir, `${scanId}-report.${format}`);
+      } else {
+        // SECURITY: `destination` is attacker-controllable from unauthenticated
+        // HTTP entry points. Treat it as a path relative to the reports directory
+        // and reject anything that escapes it (absolute paths, `..` traversal,
+        // symlink-style resolution). Prevents arbitrary file write (GHSA-ppp9-2hc2-hfg5).
+        const resolved = resolve(reportsDir, options.destination);
+        if (resolved !== reportsDir && !resolved.startsWith(reportsDir + sep)) {
+          throw new Error(
+            `Invalid destination: path must stay within the reports directory (${reportsDir})`
+          );
+        }
+        destination = resolved;
+        // Create any nested sub-directory the caller asked for (still inside reportsDir).
+        const destDir = dirname(destination);
+        if (!existsSync(destDir)) {
+          mkdirSync(destDir, { recursive: true });
         }
       }
 
