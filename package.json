@@ -68,5 +68,13 @@
     "*.{json,md}": [
       "prettier --write"
     ]
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "serialize-javascript": "^7.0.0"
+    }
   }
 }

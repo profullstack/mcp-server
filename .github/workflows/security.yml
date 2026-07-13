@@ -55,4 +55,4 @@ jobs:
             | tar -xz -C /usr/local/bin gitleaks
           gitleaks version
       - name: Scan history
-        run: gitleaks detect --source . --redact --verbose --no-banner --exit-code 1
+        run: gitleaks detect --source . --config .gitleaks.toml --redact --verbose --no-banner --exit-code 1
