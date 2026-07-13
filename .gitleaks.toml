@@ -1,0 +1,26 @@
+# Gitleaks configuration.
+# Extends the built-in default ruleset and allowlists known non-sensitive
+# values so the secret scanner stops failing on documentation placeholders
+# and the intentionally-shipped default key.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documentation placeholders and the shipped default key"
+regexTarget = "match"
+regexes = [
+  # Placeholder tokens used in example requests throughout the docs.
+  '''your-api-key-here''',
+  '''your_valueserp_api_key''',
+  '''sk-your-openai-api-key''',
+  '''your[-_]?api[-_]?key''',
+  # Obvious dummy value used in link-shortener tests.
+  '''abcdefghij1234567890''',
+  # hynt.us default API key intentionally shipped by the link-shortener module
+  # (documented as the "Default API Key" and used as a hardcoded fallback).
+  # NOTE: this is a real, shared key — consider rotating it and moving to an
+  # env var rather than committing it. Allowlisted so CI reflects that it is a
+  # known, deliberate value rather than an accidental leak.
+  '''1t7nfaw9ra0nmznsbdni''',
+]

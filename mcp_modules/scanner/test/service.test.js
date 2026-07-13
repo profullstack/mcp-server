@@ -2,9 +2,12 @@
  * Tests for the scanner module service
  */
 
-import { describe, it, afterEach } from 'mocha';
+import { describe, it, beforeEach, afterEach } from 'mocha';
+import { existsSync, rmSync } from 'fs';
+import { join, resolve, sep } from 'path';
 import { expect, sinon } from './setup.js';
 import * as utils from '../src/utils.js';
+import { ScannerService } from '../src/service.js';
 
 describe('ScannerService', () => {
   afterEach(() => {
@@ -95,6 +98,55 @@ describe('ScannerService', () => {
     it('should handle zero duration', () => {
       const result = utils.formatDuration(0);
       expect(result).to.equal('0s');
+    });
+  });
+
+  // Regression tests for GHSA-ppp9-2hc2-hfg5:
+  // unauthenticated arbitrary file write via unvalidated `destination` in exportReport.
+  describe('exportReport destination confinement', () => {
+    const scanId = 'scan-security-test';
+    let service;
+
+    const stubScan = svc => {
+      sinon.stub(svc, 'getScanById').returns({ id: scanId, status: 'completed' });
+      sinon.stub(svc, 'generateReport').resolves('<html>report</html>');
+    };
+
+    beforeEach(() => {
+      service = new ScannerService();
+      stubScan(service);
+    });
+
+    const maliciousPaths = [
+      '/tmp/pwned.html',
+      '/etc/cron.d/x',
+      '../../../../tmp/pwned.json',
+      '../../.bashrc',
+    ];
+
+    maliciousPaths.forEach(destination => {
+      it(`rejects out-of-bounds destination: ${destination}`, async () => {
+        let threw = false;
+        try {
+          await service.exportReport(scanId, { format: 'html', destination });
+        } catch (err) {
+          threw = true;
+          expect(err.message).to.match(/reports directory|Invalid destination/i);
+        }
+        expect(threw, 'exportReport should reject the malicious destination').to.be.true;
+      });
+    });
+
+    it('allows a plain filename inside the reports directory', async () => {
+      const reportsDir = resolve(join(service.dataDir, 'reports'));
+      const result = await service.exportReport(scanId, {
+        format: 'html',
+        destination: 'safe-report.html',
+      });
+      const written = resolve(result.destination);
+      expect(written === reportsDir || written.startsWith(reportsDir + sep)).to.be.true;
+      expect(existsSync(written)).to.be.true;
+      rmSync(written, { force: true });
     });
   });
 });
