@@ -14,13 +14,8 @@
  *       side-effecting routes are open.
  */
 
-import { randomBytes, createHmac, timingSafeEqual } from 'crypto';
+import { timingSafeEqual } from 'crypto';
 import { logger } from '../../../src/utils/logger.js';
-
-// Random per-process key used only to derive fixed-length digests for the
-// constant-time comparison below (the "double HMAC" technique). It never leaves
-// the process and is not a stored credential.
-const COMPARE_KEY = randomBytes(32);
 
 let missingTokenWarned = false;
 
@@ -39,19 +34,22 @@ function extractToken(c) {
 }
 
 /**
- * Constant-time comparison of two strings ("double HMAC" technique).
- * Each side is run through HMAC-SHA256 keyed by a random per-process key,
- * producing fixed-length digests. This lets `timingSafeEqual` run without
- * throwing on length mismatch or leaking the expected token length, while the
- * random key means the digests reveal nothing about the inputs.
+ * Constant-time comparison of two opaque tokens.
+ * A length check short-circuits mismatched lengths (so `timingSafeEqual` never
+ * throws), then `timingSafeEqual` compares the bytes without leaking where they
+ * differ. This is a bearer-token equality check, not password storage, so no
+ * key-derivation/hashing is involved.
  * @param {string} a
  * @param {string} b
  * @returns {boolean}
  */
 function safeEqual(a, b) {
-  const ha = createHmac('sha256', COMPARE_KEY).update(String(a)).digest();
-  const hb = createHmac('sha256', COMPARE_KEY).update(String(b)).digest();
-  return timingSafeEqual(ha, hb);
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
 }
 
 /**
