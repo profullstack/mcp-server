@@ -15,6 +15,7 @@ import {
   exportReport,
 } from './src/controller.js';
 import { scannerService } from './src/service.js';
+import { requireScannerAuth } from './src/auth.js';
 
 /**
  * Register this module with the Hono app
@@ -33,13 +34,16 @@ export async function register(app) {
     });
   });
 
-  // Register scan routes
+  // Register scan routes.
+  // Read-only routes stay open; side-effecting routes (start a scan / spawn a
+  // child process, write a report to disk) require authentication when a
+  // SCANNER_API_TOKEN is configured — see GHSA-ppp9-2hc2-hfg5.
   app.get('/scanner/scans', getScanHistory);
   app.get('/scanner/scans/:id', getScanById);
   app.get('/scanner/stats', getScanStats);
-  app.post('/scanner/scan', scanTarget);
+  app.post('/scanner/scan', requireScannerAuth, scanTarget);
   app.get('/scanner/reports/:id', generateReport);
-  app.get('/scanner/reports/:id/export', exportReport);
+  app.get('/scanner/reports/:id/export', requireScannerAuth, exportReport);
 
   // Register MCP tool
   app.get('/tools/scanner/info', c => {
@@ -81,8 +85,9 @@ export async function register(app) {
     });
   });
 
-  // Register MCP tool endpoint
-  app.post('/tools/scanner', async c => {
+  // Register MCP tool endpoint. This dispatches to side-effecting actions
+  // (scan, export), so it is guarded the same way as the direct routes.
+  app.post('/tools/scanner', requireScannerAuth, async c => {
     try {
       const params = await c.req.json();
 
