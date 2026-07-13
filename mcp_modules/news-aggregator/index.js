@@ -17,6 +17,7 @@ import {
   debugRSSFeed,
 } from './src/controller.js';
 import { newsAggregatorService } from './src/service.js';
+import { parsePositiveIntegerLimit } from './src/limit.js';
 
 /**
  * Register this module with the Hono app
@@ -455,8 +456,8 @@ export async function register(app) {
 
           // Apply limit if specified
           if (params.limit) {
-            limitNum = parseInt(params.limit, 10);
-            if (!isNaN(limitNum) && limitNum > 0) {
+            limitNum = parsePositiveIntegerLimit(params.limit);
+            if (limitNum) {
               allArticles = allArticles.slice(0, limitNum);
             }
           }
