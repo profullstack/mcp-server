@@ -40,12 +40,14 @@ describe('Weather Module', () => {
       it('should reject invalid latitude', () => {
         expect(() => utils.validateCoordinates(91, 0)).to.throw('Invalid latitude');
         expect(() => utils.validateCoordinates(-91, 0)).to.throw('Invalid latitude');
+        expect(() => utils.validateCoordinates(NaN, 0)).to.throw('Invalid latitude');
         expect(() => utils.validateCoordinates('invalid', 0)).to.throw('Invalid latitude');
       });
 
       it('should reject invalid longitude', () => {
         expect(() => utils.validateCoordinates(0, 181)).to.throw('Invalid longitude');
         expect(() => utils.validateCoordinates(0, -181)).to.throw('Invalid longitude');
+        expect(() => utils.validateCoordinates(0, NaN)).to.throw('Invalid longitude');
         expect(() => utils.validateCoordinates(0, 'invalid')).to.throw('Invalid longitude');
       });
     });

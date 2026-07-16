@@ -11,10 +11,10 @@
  * @throws {Error} If coordinates are invalid
  */
 export function validateCoordinates(latitude, longitude) {
-  if (typeof latitude !== 'number' || latitude < -90 || latitude > 90) {
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
     throw new Error('Invalid latitude: must be a number between -90 and 90');
   }
-  if (typeof longitude !== 'number' || longitude < -180 || longitude > 180) {
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
     throw new Error('Invalid longitude: must be a number between -180 and 180');
   }
 }

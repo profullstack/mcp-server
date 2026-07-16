@@ -5,6 +5,26 @@
  */
 
 import { weatherService } from './service.js';
+import { validateCoordinates } from './utils.js';
+
+function parseCoordinates(c) {
+  const rawLat = c.req.param('lat');
+  const rawLon = c.req.param('lon');
+  if (!rawLat?.trim() || !rawLon?.trim()) return null;
+
+  const lat = Number(rawLat);
+  const lon = Number(rawLon);
+  try {
+    validateCoordinates(lat, lon);
+    return { lat, lon };
+  } catch {
+    return null;
+  }
+}
+
+function invalidCoordinates(c) {
+  return c.json({ error: 'Invalid latitude or longitude parameters' }, 400);
+}
 
 /**
  * Get current weather conditions
@@ -13,12 +33,9 @@ import { weatherService } from './service.js';
  */
 export async function getCurrentWeather(c) {
   try {
-    const lat = parseFloat(c.req.param('lat'));
-    const lon = parseFloat(c.req.param('lon'));
-
-    if (isNaN(lat) || isNaN(lon)) {
-      return c.json({ error: 'Invalid latitude or longitude parameters' }, 400);
-    }
+    const coordinates = parseCoordinates(c);
+    if (!coordinates) return invalidCoordinates(c);
+    const { lat, lon } = coordinates;
 
     const weatherData = await weatherService.getCurrentWeather(lat, lon);
     return c.json(weatherData);
@@ -34,13 +51,10 @@ export async function getCurrentWeather(c) {
  */
 export async function getForecast(c) {
   try {
-    const lat = parseFloat(c.req.param('lat'));
-    const lon = parseFloat(c.req.param('lon'));
+    const coordinates = parseCoordinates(c);
+    if (!coordinates) return invalidCoordinates(c);
+    const { lat, lon } = coordinates;
     const days = parseInt(c.req.query('days')) || 5;
-
-    if (isNaN(lat) || isNaN(lon)) {
-      return c.json({ error: 'Invalid latitude or longitude parameters' }, 400);
-    }
 
     if (days < 1 || days > 7) {
       return c.json({ error: 'Days parameter must be between 1 and 7' }, 400);
@@ -60,12 +74,9 @@ export async function getForecast(c) {
  */
 export async function getWeatherAlerts(c) {
   try {
-    const lat = parseFloat(c.req.param('lat'));
-    const lon = parseFloat(c.req.param('lon'));
-
-    if (isNaN(lat) || isNaN(lon)) {
-      return c.json({ error: 'Invalid latitude or longitude parameters' }, 400);
-    }
+    const coordinates = parseCoordinates(c);
+    if (!coordinates) return invalidCoordinates(c);
+    const { lat, lon } = coordinates;
 
     const alertsData = await weatherService.getWeatherAlerts(lat, lon);
     return c.json(alertsData);
@@ -81,12 +92,9 @@ export async function getWeatherAlerts(c) {
  */
 export async function getRadarImage(c) {
   try {
-    const lat = parseFloat(c.req.param('lat'));
-    const lon = parseFloat(c.req.param('lon'));
-
-    if (isNaN(lat) || isNaN(lon)) {
-      return c.json({ error: 'Invalid latitude or longitude parameters' }, 400);
-    }
+    const coordinates = parseCoordinates(c);
+    if (!coordinates) return invalidCoordinates(c);
+    const { lat, lon } = coordinates;
 
     const radarData = await weatherService.getRadarImage(lat, lon);
     return c.json(radarData);
@@ -102,12 +110,9 @@ export async function getRadarImage(c) {
  */
 export async function getSatelliteImage(c) {
   try {
-    const lat = parseFloat(c.req.param('lat'));
-    const lon = parseFloat(c.req.param('lon'));
-
-    if (isNaN(lat) || isNaN(lon)) {
-      return c.json({ error: 'Invalid latitude or longitude parameters' }, 400);
-    }
+    const coordinates = parseCoordinates(c);
+    if (!coordinates) return invalidCoordinates(c);
+    const { lat, lon } = coordinates;
 
     const satelliteData = await weatherService.getSatelliteImage(lat, lon);
     return c.json(satelliteData);
