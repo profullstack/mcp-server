@@ -14,6 +14,7 @@ import {
   getSatelliteImage,
 } from './src/controller.js';
 import { weatherService } from './src/service.js';
+import { validateCoordinates } from './src/utils.js';
 
 /**
  * Register this module with the Hono app
@@ -98,6 +99,14 @@ export async function register(app) {
           },
           400
         );
+      }
+
+      if (hasCoordinates) {
+        try {
+          validateCoordinates(params.latitude, params.longitude);
+        } catch (error) {
+          return c.json({ error: error.message }, 400);
+        }
       }
 
       let result;
