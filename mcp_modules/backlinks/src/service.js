@@ -372,7 +372,7 @@ export class BacklinksService {
    * @returns {Promise<Object>} Submission result
    */
   async submitToSite(campaignId, siteUrl, options = {}) {
-    const campaign = this.getCampaign(campaignId);
+    const campaign = await this.getCampaign(campaignId);
     if (!campaign) {
       throw new Error(`Campaign ${campaignId} not found`);
     }
@@ -601,12 +601,13 @@ export class BacklinksService {
    * @returns {Promise<Array>} Follow-up results
    */
   async sendFollowUps(campaignId, emailConfig) {
-    const campaign = this.getCampaign(campaignId);
+    const campaign = await this.getCampaign(campaignId);
     if (!campaign) {
       throw new Error(`Campaign ${campaignId} not found`);
     }
 
-    const pendingSubmissions = this.getCampaignSubmissions(campaignId).filter(
+    const campaignSubmissions = await this.getCampaignSubmissions(campaignId);
+    const pendingSubmissions = campaignSubmissions.filter(
       s => s.status === 'submitted' && !s.followUpSent
     );
 
