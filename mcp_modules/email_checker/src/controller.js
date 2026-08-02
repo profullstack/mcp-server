@@ -37,6 +37,11 @@ export async function checkSingleEmail(c) {
     const tempService = new EmailCheckerService(apiKey, provider);
     const result = await tempService.checkEmail(data.email);
 
+    // Merge into the shared singleton so history/stats endpoints reflect it
+    for (const [id, check] of tempService.checks) {
+      emailCheckerService.checks.set(id, check);
+    }
+
     return c.json({
       success: true,
       message: 'Email checked successfully',
@@ -87,6 +92,11 @@ export async function checkMultipleEmails(c) {
     // Create a temporary service instance with the provided API key
     const tempService = new EmailCheckerService(apiKey, provider);
     const results = await tempService.checkMultipleEmails(data.emails);
+
+    // Merge into the shared singleton so history/stats endpoints reflect it
+    for (const [id, check] of tempService.checks) {
+      emailCheckerService.checks.set(id, check);
+    }
 
     // Calculate summary statistics
     const summary = {
