@@ -97,6 +97,46 @@ You can get these API keys from:
 - Stability AI: https://platform.stability.ai/account/keys
 - Anthropic: https://console.anthropic.com/settings/keys
 
+### Security
+
+The server has no global authentication layer, so anything that can reach the
+port can call any module route. Modules that touch the filesystem or issue
+outbound requests are constrained as follows.
+
+**Module tokens.** Routes with side effects accept a token via
+`Authorization: Bearer <token>` or `X-API-Key: <token>`. When the variable is
+unset the routes stay open and a warning is logged at startup.
+
+| Variable                  | Guards                                                                   |
+| ------------------------- | ------------------------------------------------------------------------ |
+| `SCANNER_API_TOKEN`       | `/scanner/scan`, `/scanner/reports/:id/export`, `/tools/scanner`         |
+| `README_BADGES_API_TOKEN` | `/readme-badges/update`, `/readme-badges/detect`, `/tools/readme-badges` |
+
+**Path containment.** `readme-badges` resolves `readmePath` and `rootDir`
+against `README_BADGES_ROOT` (default: the working directory) and refuses
+anything that escapes it, targets a non-markdown file, or reaches outside via a
+symlink. `scanner` confines exports to its reports directory the same way.
+
+**Outbound request allowlists.** Modules that fetch caller-named URLs reject
+loopback, link-local (cloud metadata), RFC1918, CGNAT and other non-public
+addresses, resolve hostnames and check every returned address, and re-validate
+each redirect hop. Where a module talks to one known service, the host is also
+allowlisted:
+
+| Variable                    | Extends the allowlist for                            |
+| --------------------------- | ---------------------------------------------------- |
+| `CONVERT2DOC_ALLOWED_HOSTS` | `convert2doc` `baseUrl` (default: `convert2doc.com`) |
+| `CRAIGSLIST_ALLOWED_HOSTS`  | `/craigslist/details` (default: `*.craigslist.org`)  |
+
+**Cross-origin requests.** `CSRF_PROTECTION_ENABLED` (default `true`) rejects
+state-changing requests that carry a foreign `Origin` header, so a malicious web
+page cannot drive a browser at a localhost-bound server. Clients that send no
+`Origin` — curl, MCP clients, server-to-server calls — are unaffected. List
+trusted browser origins in `CORS_ORIGINS`.
+
+Run the server behind an authenticating reverse proxy if it is exposed beyond
+localhost.
+
 ### Testing the Server
 
 The repository includes comprehensive testing using Mocha and Chai:

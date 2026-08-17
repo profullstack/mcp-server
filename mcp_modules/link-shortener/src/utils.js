@@ -4,10 +4,38 @@
  * Utility functions for URL validation, alias generation, and data formatting.
  */
 
+import { isBlockedAddress } from '../../../src/utils/url-guard.js';
+
 /**
- * Validate URL format and protocol
+ * Hostnames that denote the local machine or a non-public namespace regardless
+ * of what a resolver would say for them.
+ */
+const BLOCKED_HOSTNAMES = new Set([
+  'localhost',
+  'localhost.localdomain',
+  'ip6-localhost',
+  'ip6-loopback',
+  'broadcasthost',
+  'metadata',
+  'metadata.google.internal',
+  'instance-data',
+]);
+
+const BLOCKED_HOST_SUFFIXES = ['.localhost', '.local', '.internal', '.localdomain', '.home.arpa'];
+
+/**
+ * Validate URL format and protocol.
+ *
+ * This is the synchronous, no-DNS layer: it rejects bad schemes and any host
+ * that is *syntactically* non-public. It previously detected private hosts and
+ * only `console.warn`ed, letting the URL through to a server-side fetch
+ * (GHSA-6cj5-68cm-v828); the check now throws like the scheme check beside it.
+ *
+ * Hosts that only resolve to a private address are caught by the async
+ * {@link assertPublicUrl}, which the fetch path uses.
+ *
  * @param {string} url - URL to validate
- * @throws {Error} If URL is invalid
+ * @throws {Error} If URL is invalid or points at a non-public host
  */
 export function validateUrl(url) {
   if (!url || typeof url !== 'string') {
@@ -38,21 +66,28 @@ export function validateUrl(url) {
     throw new Error('URL must use HTTP or HTTPS protocol');
   }
 
-  // Check for localhost/private IPs in production
-  const hostname = urlObj.hostname.toLowerCase();
-  const privatePatterns = [
-    /^localhost$/,
-    /^127\./,
-    /^192\.168\./,
-    /^10\./,
-    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
-    /^::1$/,
-    /^fe80:/,
-  ];
+  // Embedded credentials are a parser-confusion trick (`http://allowed@evil/`).
+  if (urlObj.username || urlObj.password) {
+    throw new Error('URL must not contain embedded credentials');
+  }
 
-  const isPrivate = privatePatterns.some(pattern => pattern.test(hostname));
-  if (isPrivate) {
-    console.warn('Warning: URL appears to be a private/local address');
+  // Reject localhost/private addresses. This MUST throw: the whole point of the
+  // check is to keep server-side requests off internal hosts.
+  const hostname = urlObj.hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  if (!hostname) {
+    throw new Error('URL must include a host');
+  }
+  if (
+    BLOCKED_HOSTNAMES.has(hostname) ||
+    BLOCKED_HOST_SUFFIXES.some(suffix => hostname.endsWith(suffix))
+  ) {
+    throw new Error('URL must not point to a private or local address');
+  }
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.includes(':')) {
+    // Literal IP: decide from the address itself, no resolver involved.
+    if (isBlockedAddress(hostname)) {
+      throw new Error('URL must not point to a private or local address');
+    }
   }
 
   // Check for suspicious patterns

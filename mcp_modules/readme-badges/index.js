@@ -4,9 +4,26 @@
  * Generates shields.io badges and updates README.md with idempotent markers.
  */
 
+import { createTokenAuth } from '../../src/core/auth.js';
 import { logger } from '../../src/utils/logger.js';
-import { generateBadgesHandler, updateReadmeHandler, detectTechHandler } from './src/controller.js';
+import {
+  generateBadgesHandler,
+  updateReadmeHandler,
+  detectTechHandler,
+  statusForError,
+} from './src/controller.js';
 import { readmeBadgesService } from './src/service.js';
+
+/**
+ * Auth for the routes that touch the filesystem. Path containment already stops
+ * the arbitrary-write primitive (GHSA-5x56-587v-mv4r); this closes the second
+ * half of the advisory — the routes had no authentication at all.
+ */
+const requireReadmeBadgesAuth = createTokenAuth({
+  envVar: 'README_BADGES_API_TOKEN',
+  label: 'readme-badges',
+  routesDescription: 'file-writing routes (update)',
+});
 
 /**
  * Register this module with the Hono app
@@ -25,10 +42,11 @@ export async function register(app) {
     });
   });
 
-  // HTTP routes
+  // HTTP routes. `generate` is pure string building; `update` writes to disk and
+  // `detect` reads from it, so both sit behind the module token.
   app.post('/readme-badges/generate', generateBadgesHandler);
-  app.post('/readme-badges/update', updateReadmeHandler);
-  app.post('/readme-badges/detect', detectTechHandler);
+  app.post('/readme-badges/update', requireReadmeBadgesAuth, updateReadmeHandler);
+  app.post('/readme-badges/detect', requireReadmeBadgesAuth, detectTechHandler);
 
   // MCP tool info
   app.get('/tools/readme-badges/info', c => {
@@ -82,8 +100,8 @@ export async function register(app) {
     });
   });
 
-  // MCP tool endpoint
-  app.post('/tools/readme-badges', async c => {
+  // MCP tool endpoint — same filesystem reach as the routes above, same token.
+  app.post('/tools/readme-badges', requireReadmeBadgesAuth, async c => {
     try {
       const params = await c.req.json();
 
@@ -149,7 +167,7 @@ export async function register(app) {
           return c.json({ error: `Unknown action: ${params.action}` }, 400);
       }
     } catch (error) {
-      return c.json({ error: error.message }, 500);
+      return c.json({ error: error.message }, statusForError(error));
     }
   });
 

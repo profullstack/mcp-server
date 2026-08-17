@@ -3,6 +3,7 @@
  * Main search orchestration and result processing
  */
 
+import { assertSafeUrl } from '../../../src/utils/url-guard.js';
 import { logger } from '../../../src/utils/logger.js';
 import { fetchWithPuppeteer, fetchWithRetry } from './http.js';
 import { parseSearchResults, parsePostingDetails, isErrorPage } from './parsing.js';
@@ -357,14 +358,43 @@ function buildSearchUrl(params) {
 }
 
 /**
+ * Craigslist hostnames the details fetcher may navigate to.
+ *
+ * The details path took an entirely caller-chosen URL and drove headless Chrome
+ * at it, while the search path had always constrained requests to a craigslist
+ * city allowlist — an unauthenticated SSRF (GHSA-7h99-c5qj-vhxp). Operators
+ * running a mirror can extend the list with CRAIGSLIST_ALLOWED_HOSTS
+ * (comma-separated; a leading dot matches subdomains).
+ *
+ * Read lazily so the variable can be set after this module is imported.
+ * @returns {string[]}
+ */
+function allowedPostingHosts() {
+  const configured = (process.env.CRAIGSLIST_ALLOWED_HOSTS || '')
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean);
+  return ['.craigslist.org', ...configured];
+}
+
+/**
  * Get posting details by URL
  * @param {string} postingUrl - URL of the posting
  * @param {boolean} usePuppeteer - Whether to use Puppeteer
  * @returns {Promise<Object>} Posting details
+ * @throws {import('../../../src/utils/url-guard.js').UnsafeUrlError} for a non-craigslist or non-public URL
  */
 export async function getPostingDetails(postingUrl, usePuppeteer = true) {
   try {
     logger.info(`Fetching posting details: ${postingUrl}`);
+
+    // Validate before any navigation: this is the sink an attacker steers.
+    const { url } = await assertSafeUrl(postingUrl, {
+      protocols: ['https:', 'http:'],
+      allowedHosts: allowedPostingHosts(),
+      fieldName: 'url',
+    });
+    postingUrl = url.toString();
 
     const response = usePuppeteer
       ? await fetchWithPuppeteer(postingUrl)

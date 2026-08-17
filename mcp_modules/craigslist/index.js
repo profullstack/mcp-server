@@ -5,6 +5,7 @@
  * all Craigslist sites with filtering by categories and other options.
  */
 
+import { UnsafeUrlError } from '../../src/utils/url-guard.js';
 import { logger } from '../../src/utils/logger.js';
 import cities from './cities.js';
 import categories from './categories.js';
@@ -125,7 +126,9 @@ export async function register(app) {
       });
     } catch (error) {
       logger.error(`Error getting Craigslist posting details: ${error.message}`);
-      return c.json({ error: error.message }, 500);
+      // A rejected URL is a caller error, not a server fault.
+      const status = error instanceof UnsafeUrlError ? 400 : 500;
+      return c.json({ error: error.message }, status);
     }
   });
 

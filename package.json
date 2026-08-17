@@ -45,7 +45,7 @@
     "https-proxy-agent": "^7.0.6",
     "jsdom": "^22.1.0",
     "node-fetch": "^3.3.2",
-    "puppeteer": "^24.8.2",
+    "puppeteer": "^25.7.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "stream-transform": "^3.2.10"
