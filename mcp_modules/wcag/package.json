@@ -26,9 +26,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "dependencies": {
-    "child_process": "^1.0.2"
-  },
   "devDependencies": {
     "chai": "^4.3.7",
     "eslint": "^8.57.0",
@@ -37,5 +34,15 @@
   },
   "peerDependencies": {
     "pa11y": "^8.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "serialize-javascript": "^7.0.0"
+    }
+  },
+  "peerDependenciesMeta": {
+    "pa11y": {
+      "optional": true
+    }
   }
 }

@@ -38,27 +38,27 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@hono/node-server": "^1.14.1",
-    "dotenv": "^16.3.1",
-    "form-data": "^4.0.0",
-    "hono": "^4.7.9",
+    "@hono/node-server": "^1.19.17",
+    "dotenv": "^16.6.1",
+    "form-data": "^4.0.6",
+    "hono": "^4.13.2",
     "https-proxy-agent": "^7.0.6",
     "jsdom": "^22.1.0",
     "node-fetch": "^3.3.2",
     "puppeteer": "^25.7.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "stream-transform": "^3.2.10"
+    "stream-transform": "^3.5.1"
   },
   "devDependencies": {
-    "chai": "^4.3.7",
-    "eslint": "^8.56.0",
+    "chai": "^4.5.0",
+    "eslint": "^8.57.1",
     "husky": "^9.1.7",
-    "lint-staged": "^16.0.0",
-    "mocha": "^10.2.0",
-    "prettier": "^3.1.1",
-    "sinon": "^15.0.3",
-    "supertest": "^6.3.3"
+    "lint-staged": "^16.4.0",
+    "mocha": "^10.8.2",
+    "prettier": "^3.9.6",
+    "sinon": "^15.2.0",
+    "supertest": "^6.3.4"
   },
   "lint-staged": {
     "*.js": [
