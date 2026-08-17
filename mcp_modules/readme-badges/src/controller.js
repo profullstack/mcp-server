@@ -4,7 +4,20 @@
  * HTTP route handlers for the readme-badges module endpoints.
  */
 
+import { UnsafePathError } from '../../../src/utils/path-guard.js';
 import { readmeBadgesService } from './service.js';
+
+/**
+ * Map a thrown error to an HTTP status. Rejected paths are caller errors, not
+ * server faults, and must not be reported as 500.
+ * @param {Error} error
+ * @returns {400|500}
+ */
+export function statusForError(error) {
+  return error instanceof UnsafePathError || /^Invalid marker/.test(error?.message ?? '')
+    ? 400
+    : 500;
+}
 
 /**
  * Generate markdown badges
@@ -63,7 +76,7 @@ export async function updateReadmeHandler(c) {
 
     return c.json(outcome);
   } catch (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, statusForError(error));
   }
 }
 
@@ -83,7 +96,7 @@ export async function detectTechHandler(c) {
       count: detected.length,
     });
   } catch (error) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: error.message }, statusForError(error));
   }
 }
 

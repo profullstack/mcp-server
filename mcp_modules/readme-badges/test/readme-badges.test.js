@@ -10,11 +10,20 @@ import { readmeBadgesService } from '../src/service.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Paths are contained to README_BADGES_ROOT (GHSA-5x56-587v-mv4r), so the temp
+// directory has to stand in as the project root for the duration of each test.
 async function withTempDir(fn) {
   const dir = await fs.mkdtemp(join(tmpdir(), 'readme-badges-'));
+  const previousRoot = process.env.README_BADGES_ROOT;
+  process.env.README_BADGES_ROOT = dir;
   try {
     return await fn(dir);
   } finally {
+    if (previousRoot === undefined) {
+      delete process.env.README_BADGES_ROOT;
+    } else {
+      process.env.README_BADGES_ROOT = previousRoot;
+    }
     await fs.rm(dir, { recursive: true, force: true });
   }
 }

@@ -91,9 +91,11 @@ describe('Craigslist API', () => {
         // If we get here, the function didn't throw (unexpected)
         expect.fail('Expected function to throw an error for invalid URL');
       } catch (error) {
-        // Should throw an error for invalid URL
+        // Should throw an error for invalid URL. The host allowlist added for
+        // GHSA-7h99-c5qj-vhxp now rejects a non-craigslist host before any
+        // navigation, so the rejection arrives sooner than the old DNS failure.
         expect(error).to.be.an('error');
-        expect(error.message).to.include('ERR_NAME_NOT_RESOLVED');
+        expect(error.message).to.match(/host is not allowed|ERR_NAME_NOT_RESOLVED/);
       }
     });
   });

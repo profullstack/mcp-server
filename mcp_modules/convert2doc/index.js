@@ -5,7 +5,48 @@
  * Supports conversion from PDF, DOCX, DOC, EPUB, TXT, PPTX, XLSX to Markdown and other formats.
  */
 
+import { assertSafeUrl, safeFetch } from '../../src/utils/url-guard.js';
 import { logger } from '../../src/utils/logger.js';
+
+const DEFAULT_BASE_URL = 'https://convert2doc.com';
+
+/**
+ * Hosts the module may send documents to.
+ *
+ * `baseUrl` is a service-endpoint setting, not user data, but it arrives in an
+ * unauthenticated request body and was used verbatim as a `fetch` target with
+ * the response reflected back to the caller — a read-SSRF (GHSA-qgcm-wf9m-hqwc).
+ * Operators who self-host the conversion API can extend the list with
+ * CONVERT2DOC_ALLOWED_HOSTS (comma-separated; a leading dot matches subdomains).
+ *
+ * Read lazily so the variable can be set after this module is imported.
+ * @returns {string[]}
+ */
+function allowedBaseHosts() {
+  const configured = (process.env.CONVERT2DOC_ALLOWED_HOSTS || '')
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean);
+  return ['convert2doc.com', '.convert2doc.com', ...configured];
+}
+
+/**
+ * Validate a caller-supplied API base URL and return it without a trailing slash.
+ * @param {string} baseUrl
+ * @returns {Promise<string>} the normalized, validated base URL
+ * @throws {UnsafeUrlError} when the base URL is not an allowed public https host
+ */
+async function assertSafeBaseUrl(baseUrl) {
+  const { url } = await assertSafeUrl(baseUrl, {
+    protocols: ['https:'],
+    allowedHosts: allowedBaseHosts(),
+    fieldName: 'baseUrl',
+  });
+
+  // Only the origin and path prefix are meaningful for an API base; drop any
+  // query/fragment so they cannot be smuggled ahead of the appended path.
+  return `${url.origin}${url.pathname}`.replace(/\/+$/, '');
+}
 
 /**
  * Convert a document using the convert2doc.com API
@@ -24,7 +65,7 @@ async function convertDocument(
   filename,
   fromFormat,
   toFormat = 'markdown',
-  baseUrl = 'https://convert2doc.com',
+  baseUrl = DEFAULT_BASE_URL,
   store = false
 ) {
   try {
@@ -57,21 +98,32 @@ async function convertDocument(
       );
     }
 
-    // Build endpoint URL
-    const endpoint = `${baseUrl}/api/1/${fromFormat.toLowerCase()}-to-${toFormat.toLowerCase()}`;
+    // Build endpoint URL from a validated base (see assertSafeBaseUrl).
+    const safeBaseUrl = await assertSafeBaseUrl(baseUrl);
+    const endpoint = `${safeBaseUrl}/api/1/${fromFormat.toLowerCase()}-to-${toFormat.toLowerCase()}`;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+    // safeFetch re-validates every redirect hop, so an allowed host cannot bounce
+    // the request (and the bearer token) to an internal address.
+    const response = await safeFetch(
+      endpoint,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          file: fileBase64,
+          filename: filename,
+          store: store,
+        }),
       },
-      body: JSON.stringify({
-        file: fileBase64,
-        filename: filename,
-        store: store,
-      }),
-    });
+      {
+        protocols: ['https:'],
+        allowedHosts: allowedBaseHosts(),
+        fieldName: 'baseUrl',
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -136,7 +188,7 @@ export async function register(app) {
         filename,
         fromFormat,
         toFormat = 'markdown',
-        baseUrl = 'https://convert2doc.com',
+        baseUrl = DEFAULT_BASE_URL,
         store = false,
       } = body;
 
@@ -251,7 +303,7 @@ export async function register(app) {
         params.filename,
         params.fromFormat,
         params.toFormat || 'markdown',
-        params.baseUrl || 'https://convert2doc.com',
+        params.baseUrl || DEFAULT_BASE_URL,
         params.store || false
       );
 

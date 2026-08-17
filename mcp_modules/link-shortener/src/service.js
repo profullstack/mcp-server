@@ -5,6 +5,7 @@
  * Integrates with hynt.us API for creating and managing short links.
  */
 
+import { safeFetch } from '../../../src/utils/url-guard.js';
 import { validateUrl as validateUrlUtil, generateRandomAlias, formatLinkData } from './utils.js';
 
 /**
@@ -162,14 +163,21 @@ export class LinkService {
     try {
       validateUrlUtil(url);
 
-      // Check if URL is accessible
-      const response = await fetch(url, {
-        method: 'HEAD',
-        headers: {
-          'User-Agent': this.userAgent,
+      // Check if URL is accessible. safeFetch resolves the host and refuses any
+      // non-public address, and re-validates every redirect hop — without it
+      // this HEAD request is an internal reachability/redirect oracle
+      // (GHSA-6cj5-68cm-v828).
+      const response = await safeFetch(
+        url,
+        {
+          method: 'HEAD',
+          headers: {
+            'User-Agent': this.userAgent,
+          },
+          signal: AbortSignal.timeout(10000), // 10 second timeout
         },
-        timeout: 10000, // 10 second timeout
-      });
+        { protocols: ['http:', 'https:'], fieldName: 'url' }
+      );
 
       return {
         valid: true,

@@ -123,6 +123,12 @@ export const config = {
       enabled: parseBool(process.env.CORS_ENABLED, true),
       origins: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['*'],
     },
+    // Blocks browser-driven cross-origin state-changing requests. See the CSRF
+    // guard in middleware.js — non-browser clients send no Origin and are
+    // unaffected.
+    csrf: {
+      enabled: parseBool(process.env.CSRF_PROTECTION_ENABLED, true),
+    },
     rateLimit: {
       enabled: parseBool(process.env.RATE_LIMIT_ENABLED, true),
       windowMs: parseNum(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000), // 15 minutes
@@ -131,8 +137,42 @@ export const config = {
   },
 };
 
+/**
+ * Keys whose values are credentials and must never reach stdout. The startup
+ * dump below runs in development, which is the default NODE_ENV, so an
+ * unredacted dump writes every configured API key into terminal scrollback and
+ * any log collector reading it (CWE-532).
+ */
+const SECRET_KEY_PATTERN = /(key|token|secret|password|credential)/i;
+
+/**
+ * Deep-copy a config object with credential values replaced by a placeholder.
+ * @param {unknown} value
+ * @param {string} [keyName] - the key `value` was found under
+ * @returns {unknown}
+ */
+function redactSecrets(value, keyName = '') {
+  if (Array.isArray(value)) {
+    return value.map(entry => redactSecrets(entry));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, redactSecrets(entry, key)])
+    );
+  }
+  // Only strings are redacted: credentials are strings, while numeric settings
+  // that happen to match the pattern (`maxTokens`) are not secrets.
+  if (typeof value === 'string' && value !== '' && SECRET_KEY_PATTERN.test(keyName)) {
+    return '[redacted]';
+  }
+  return value;
+}
+
 // Log the configuration in development mode
 if (config.server.env === 'development') {
   console.log('MCP Server Configuration:');
-  console.log(JSON.stringify(config, null, 2));
+  console.log(JSON.stringify(redactSecrets(config), null, 2));
 }
+
+// Exposed for unit tests.
+export const _internal = { redactSecrets };
