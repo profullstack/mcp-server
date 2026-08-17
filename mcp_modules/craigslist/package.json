@@ -24,8 +24,13 @@
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {
-    "chai": "^4.3.7",
-    "mocha": "^10.2.0",
-    "sinon": "^15.0.3"
+    "chai": "^4.5.0",
+    "mocha": "^10.8.2",
+    "sinon": "^15.2.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "serialize-javascript": "^7.0.0"
+    }
   }
 }

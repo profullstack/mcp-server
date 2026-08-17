@@ -29,7 +29,7 @@ export const logger = {
    */
   formatMessage(level, message) {
     const timestamp = new Date().toISOString();
-    
+
     if (config?.logging?.format === 'json') {
       return JSON.stringify({
         timestamp,
@@ -37,7 +37,7 @@ export const logger = {
         message,
       });
     }
-    
+
     return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
   },
 

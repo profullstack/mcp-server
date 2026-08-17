@@ -24,12 +24,16 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@eslint/js": "^9.28.0",
-    "chai": "^4.3.7",
-    "eslint": "^9.28.0",
-    "mocha": "^10.2.0",
-    "sinon": "^15.0.3"
+    "@eslint/js": "^9.39.5",
+    "chai": "^4.5.0",
+    "eslint": "^9.39.5",
+    "mocha": "^10.8.2",
+    "sinon": "^15.2.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "serialize-javascript": "^7.0.0"
+    }
   }
 }
