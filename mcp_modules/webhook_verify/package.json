@@ -1,0 +1,40 @@
+{
+  "name": "mcp-module-webhook-verify",
+  "version": "1.0.0",
+  "description": "Timing-safe, replay-resistant webhook signature verification for Stripe, GitHub, Slack, Shopify, Twilio and generic HMAC",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js",
+    "test:watch": "mocha test/**/*.test.js --watch",
+    "lint": "eslint src/ test/ --fix",
+    "format": "prettier --write src/ test/ examples/"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "webhook",
+    "signature",
+    "hmac",
+    "security",
+    "stripe",
+    "github",
+    "slack",
+    "twilio",
+    "shopify"
+  ],
+  "author": "profullstack community",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^17.0.1",
+    "sinon-chai": "^4.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.0.0"
+  }
+}
