@@ -1,0 +1,35 @@
+{
+  "name": "mcp-module-csvjson",
+  "version": "1.0.0",
+  "description": "Lossless CSV <-> JSON conversion with schema inference, strict coercion, nested-object flattening and reconciliation receipts",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js",
+    "test:watch": "mocha test/**/*.test.js --watch",
+    "lint": "eslint src/ test/ --fix",
+    "format": "prettier --write src/ test/ examples/"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "csv",
+    "json",
+    "conversion",
+    "schema",
+    "data"
+  ],
+  "author": "profullstack community",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^17.0.1",
+    "eslint": "^8.57.0",
+    "prettier": "^3.0.0"
+  }
+}
