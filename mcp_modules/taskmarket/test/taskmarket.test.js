@@ -14,7 +14,8 @@ import {
   runTaskmarket, listTasks, getTask, createTask, listSubmissions, acceptSubmission,
 } from "../src/taskmarket.js";
 
-const fakeBin = path.join(os.tmpdir(), "fake-taskmarket-" + process.pid + ".sh");
+const fakeBinDir = fs.mkdtempSync(path.join(os.tmpdir(), "fake-taskmarket-"));
+const fakeBin = path.join(fakeBinDir, "fake-taskmarket.sh");
 
 before(function () {
   fs.writeFileSync(fakeBin,
@@ -52,7 +53,7 @@ before(function () {
   process.env.TASKMARKET_BIN = fakeBin;
 });
 
-after(function () { try { fs.unlinkSync(fakeBin); } catch {} });
+after(function () { try { fs.rmSync(fakeBinDir, { recursive: true, force: true }); } catch {} });
 
 describe("taskmarket CLI wrapper", () => {
   it("parses JSON from CLI output (strips ANSI)", async () => {
