@@ -1,0 +1,22 @@
+{
+  "name": "mcp-module-taskmarket",
+  "version": "1.0.0",
+  "description": "Taskmarket delegation module for the Profullstack MCP server — browse, create (authorized), and review submissions on Base via first-party taskmarket CLI",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "keywords": [
+    "mcp",
+    "module",
+    "taskmarket",
+    "task",
+    "bounty",
+    "base",
+    "delegation",
+    "agent"
+  ],
+  "license": "MIT",
+  "dependencies": {}
+}
