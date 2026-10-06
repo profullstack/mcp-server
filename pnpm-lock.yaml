@@ -14,6 +14,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.19.17
         version: 1.19.17(hono@4.13.2)
+      '@profullstack/stack':
+        specifier: 0.4.0
+        version: 0.4.0
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
@@ -127,6 +130,37 @@ packages:
 
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
+
+  '@profullstack/emailer@1.0.3':
+    resolution: {integrity: sha512-VyAtCcfnSI6LOwJvWogCr3ZNmEsaZw+iuWrqnosLsdcKsbRyCrCmXigMNZJZEjlgYlR+lK//PwNPG+xtCFvWAw==}
+
+  '@profullstack/form-guard@0.1.1':
+    resolution: {integrity: sha512-RGLGfQhjq40f+JqEhSmsJnS0I5sFWjYdrYx4VYtkUqz8xvioN2yyR+6uFK0mnDAStKrYytlngg3meUsrChm/OQ==}
+    engines: {node: '>=20'}
+
+  '@profullstack/referrals@0.1.0':
+    resolution: {integrity: sha512-u66SdBVpsv3kc0N+NWISPoYD5vjCERyv5wfD07iSkZwQeC2IA+ihX5jNA4e7Xr+Y4AUvxLycG+3b4VaROqzgRg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: '>=18'
+    peerDependenciesMeta:
+      react:
+        optional: true
+
+  '@profullstack/stack@0.4.0':
+    resolution: {integrity: sha512-8iQzEiPp9UbrW7qqF5nHZJhQr3lOXQvMDQf+HyMWbZd4uEiYlSaKEbgBpKk7LM4/CADLZPNO10t5ovBqBJ9V9A==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@supabase/ssr': '>=0.5.0'
+      next: '>=13.0.0'
+      react: '>=18.0.0'
+    peerDependenciesMeta:
+      '@supabase/ssr':
+        optional: true
+      next:
+        optional: true
+      react:
+        optional: true
 
   '@puppeteer/browsers@3.2.0':
     resolution: {integrity: sha512-LlBrE8oqGfU7b1Nk2d5Q1SbuPhZxTj0cJEMDPEws28OjNMELlflekmPPuf4FnK03x0ZRjKaYwJElUcKK4kyqJA==}
@@ -1438,6 +1472,18 @@ snapshots:
   '@paralleldrive/cuid2@2.3.1':
     dependencies:
       '@noble/hashes': 1.8.0
+
+  '@profullstack/emailer@1.0.3': {}
+
+  '@profullstack/form-guard@0.1.1': {}
+
+  '@profullstack/referrals@0.1.0': {}
+
+  '@profullstack/stack@0.4.0':
+    dependencies:
+      '@profullstack/emailer': 1.0.3
+      '@profullstack/form-guard': 0.1.1
+      '@profullstack/referrals': 0.1.0
 
   '@puppeteer/browsers@3.2.0(yauzl@2.10.0)':
     dependencies:

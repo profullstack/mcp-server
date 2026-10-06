@@ -170,6 +170,10 @@ export async function getModulesInfo() {
               : await import(moduleUrl);
 
             // If the module has metadata, merge it with the package.json info
+            // A module that exports callTool(name, args) answers MCP tools/call itself
+            // (routes.js); one without it keeps the HTTP-endpoint behaviour.
+            if (typeof module.callTool === 'function') moduleInfo.callTool = module.callTool;
+
             if (module.metadata) {
               moduleInfo = {
                 ...moduleInfo,

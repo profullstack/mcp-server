@@ -114,10 +114,11 @@ export function setupCoreRoutes(app) {
             const moduleTools = Array.isArray(m.tools) ? m.tools : [];
             return moduleTools.map(t => {
               const name = typeof t === 'string' ? t : (t?.name ?? String(t));
+              // A tool may be declared as an object with its own description and schema.
               return {
                 name,
-                description: m.description || `Tool from module ${m.name}`,
-                inputSchema: { type: 'object', additionalProperties: true },
+                description: (typeof t === 'object' && t?.description) || m.description || `Tool from module ${m.name}`,
+                inputSchema: (typeof t === 'object' && t?.inputSchema) || { type: 'object', additionalProperties: true },
               };
             });
           });
@@ -156,6 +157,21 @@ export function setupCoreRoutes(app) {
               id,
               error: { code: -32601, message: `Tool not found: ${name}` },
             };
+          }
+
+          // A module with callTool runs the tool in-process and returns its result.
+          if (typeof found.callTool === 'function') {
+            try {
+              const value = await found.callTool(name, args);
+              const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+              return { jsonrpc: '2.0', id, result: { content: [{ type: 'text', text }], isError: false } };
+            } catch (error) {
+              return {
+                jsonrpc: '2.0',
+                id,
+                result: { content: [{ type: 'text', text: error?.message || String(error) }], isError: true },
+              };
+            }
           }
 
           // Attempt to call a conventional endpoint provided by the module:
