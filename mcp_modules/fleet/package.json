@@ -1,0 +1,15 @@
+{
+  "name": "mcp-module-fleet",
+  "version": "1.0.0",
+  "description": "The Profullstack fleet catalog: 62 services, their APIs, MCP servers and installers, all on CoinPay OAuth",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "mocha test/**/*.test.js"
+  },
+  "keywords": ["mcp", "module", "fleet", "catalog", "profullstack", "coinpay", "oauth"],
+  "author": "Profullstack, Inc.",
+  "license": "ISC",
+  "engines": { "node": ">=20.0.0" },
+  "dependencies": {}
+}
