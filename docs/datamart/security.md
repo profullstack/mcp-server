@@ -25,8 +25,9 @@ type and not being turned against upstream sources.
 - **Secrets.** `DATAGOV_API_KEY` is sent only in the `X-Api-Key` header, never in
   a URL, and is never echoed. Data.gov cache keys are URLs without the key.
 - **Validation.** Every surface validates arguments with the same strict schema;
-  unknown parameters are rejected with `invalid_filters`. Cursors are opaque,
-  bound to a snapshot version, and rejected if tampered with. Item and record ids
+  unknown parameters are rejected with `invalid_filters`. Cursors are bound to a
+  snapshot version and rejected when the snapshot changes; they are not signed,
+  so a hand-made cursor can only move the offset within public results. Item and record ids
   are pattern-checked before they reach a URL path.
 - **Honest output.** Missing configuration is a 503 `configuration_required`,
   never an empty 200. Coverage gaps (outside the launch area, private schools,

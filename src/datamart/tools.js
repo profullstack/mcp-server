@@ -16,11 +16,13 @@ import {
   searchEducation,
   getDirectoryRecord,
   directoryCoverage,
+  parseLimit,
   LIBRARY_TYPES,
   EDU_TYPES,
 } from './directory.js';
 import { MANIFESTS, listProviders, getManifest, providerStatus, summarize } from './registry.js';
 import { headlineState } from './capabilities.js';
+import { resolveOrigin } from './geo.js';
 
 /* ---------- provider health (PRD §17 source-health) ---------- */
 
@@ -101,10 +103,14 @@ export const TOOLS = [
       const ns = args.namespace || 'all';
       const rest = { ...args };
       delete rest.namespace;
-      const limit = rest.limit ? Number(rest.limit) : 25;
+      const limit = parseLimit(rest.limit);
+      // Resolve once: an address must not reach the geocoder twice, and a bad
+      // location is an error even when only government services are wanted.
+      const origin = await resolveOrigin(rest, deps);
+      const shared = { ...deps, origin };
       const parts = [];
-      if (ns === 'all' || ns === 'lib') parts.push(await searchLibraries({ ...rest, limit: 100 }, deps));
-      if (ns === 'all' || ns === 'edu') parts.push(await searchEducation({ ...rest, limit: 100 }, deps));
+      if (ns === 'all' || ns === 'lib') parts.push(await searchLibraries({ ...rest, limit: 100 }, shared));
+      if (ns === 'all' || ns === 'edu') parts.push(await searchEducation({ ...rest, limit: 100 }, shared));
       const located = parts.flatMap(p => p.data).sort((a, b) => a.distance_miles - b.distance_miles).slice(0, limit);
       const services = ns === 'all' || ns === 'gov' ? govServices(args.q) : [];
       const meta = parts[0]?.meta || { location_applied: false };

@@ -34,6 +34,26 @@ describe('datamart CLI', function () {
     }
   });
 
+  it('reports a flag without a value as a normal error', async () => {
+    try {
+      await cli(['lib', 'search', '--zip']);
+      throw new Error('should fail');
+    } catch (err) {
+      expect(err.code).to.equal(1);
+      expect(err.stderr).to.match(/^datamart: --zip needs a value/);
+    }
+  });
+
+  it('passes array arguments (keyword) through to tools', async () => {
+    try {
+      await cli(['data', 'search', 'health', '--keyword', 'x']);
+      throw new Error('should fail');
+    } catch (err) {
+      // Reaches the Data.gov adapter (unkeyed here) instead of failing schema validation.
+      expect(err.stderr).to.include('configuration_required');
+    }
+  });
+
   it('serves MCP over stdio', async () => {
     const child = spawn(process.execPath, [CLI, 'mcp', 'serve', '--namespace', 'edu']);
     const lines = [];

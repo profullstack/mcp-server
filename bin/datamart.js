@@ -19,7 +19,11 @@
  * running tools in-process. --json writes only the result to stdout;
  * diagnostics go to stderr.
  */
-import { runTool, TOOLS, toolsFor } from '../src/datamart/tools.js';
+import os from 'node:os';
+import path from 'node:path';
+import { z } from 'zod';
+import { runTool, TOOLS, toolsFor, getTool } from '../src/datamart/tools.js';
+import { usePersistentCooldowns } from '../src/datamart/http.js';
 import { toErrorResponse } from '../src/datamart/errors.js';
 
 const NOT_YET = {
@@ -44,17 +48,21 @@ export function parseCli(argv) {
     }
     const eq = a.indexOf('=');
     const key = a.slice(2, eq === -1 ? undefined : eq);
-    if (eq !== -1) values[key] = a.slice(eq + 1);
-    else if (BOOLEAN_FLAGS.has(key)) values[key] = true;
-    else if (i + 1 < argv.length && !argv[i + 1].startsWith('--')) values[key] = argv[++i];
+    let value;
+    if (eq !== -1) value = a.slice(eq + 1);
+    else if (BOOLEAN_FLAGS.has(key)) value = true;
+    else if (i + 1 < argv.length && !argv[i + 1].startsWith('--')) value = argv[++i];
     else throw new Error(`--${key} needs a value`);
+    // Repeated flags (--keyword a --keyword b) collect into a list.
+    values[key] = key in values ? [].concat(values[key], value) : value;
   }
   return { values, positionals };
 }
 
-const { values, positionals } = parseCli(process.argv.slice(2));
-const json = values.json === true;
-const api = typeof values.api === 'string' ? values.api.replace(/\/+$/, '') : null;
+let values = {};
+let positionals = [];
+let json = process.argv.includes('--json');
+let api = null;
 
 /** --radius-miles 20 -> { radius_miles: '20' }; drops CLI-only flags. */
 function toolArgs(extra = {}) {
@@ -66,7 +74,21 @@ function toolArgs(extra = {}) {
   return { ...out, ...extra };
 }
 
-async function call(name, args) {
+/** Wrap single values for array-typed arguments (e.g. datagov_search keyword). */
+function fitArgs(name, args) {
+  const tool = getTool(name);
+  if (!tool) return args;
+  const out = { ...args };
+  for (const [k, v] of Object.entries(out)) {
+    const def = tool.shape[k];
+    const inner = def?.unwrap ? def.unwrap() : def;
+    if (inner instanceof z.ZodArray && !Array.isArray(v)) out[k] = [v];
+  }
+  return out;
+}
+
+async function call(name, rawArgs) {
+  const args = fitArgs(name, rawArgs);
   if (!api) return runTool(name, args);
   const res = await fetch(`${api}/api/v1/tools/${encodeURIComponent(name)}`, {
     method: 'POST',
@@ -107,7 +129,6 @@ function print(result) {
 async function serveMcp(namespace) {
   const { McpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
   const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
-  const { z } = await import('zod');
   const defs = namespace ? toolsFor({ namespace }) : TOOLS;
   const server = new McpServer({ name: `datamart${namespace ? `-${namespace}` : ''}`, version: '0.1.0' });
   for (const t of defs) {
@@ -129,6 +150,11 @@ async function serveMcp(namespace) {
 }
 
 async function main() {
+  ({ values, positionals } = parseCli(process.argv.slice(2)));
+  json = values.json === true;
+  api = typeof values.api === 'string' ? values.api.replace(/\/+$/, '') : null;
+  const cacheHome = process.env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache');
+  usePersistentCooldowns(path.join(cacheHome, 'datamart', 'cooldowns.json'));
   const [cmd, sub, ...rest] = positionals;
   if (!cmd || values.help) {
     console.log((await import('node:fs')).readFileSync(new URL(import.meta.url), 'utf8').split('*/')[0].replace(/^#!.*\n\/\*\*\n/, '').replace(/^ \* ?/gm, ''));

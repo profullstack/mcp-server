@@ -135,7 +135,7 @@ function parseBool(value, field) {
   throw new DatamartError('invalid_filters', `${field} must be true or false`, { field });
 }
 
-function parseLimit(value) {
+export function parseLimit(value) {
   if (value === undefined || value === null || value === '') return 25;
   const n = Number(value);
   if (!Number.isInteger(n) || n < 1 || n > MAX_LIMIT) {
@@ -155,7 +155,7 @@ const textMatch = (q, ...fields) => {
  * @returns {Promise<{ data: object[], meta: object, sources: object[], warnings: string[], unresolved?: object[] }>}
  */
 async function radiusSearch(params, deps, { records, sources, version, warnings: baseWarnings = [] }) {
-  const origin = await resolveOrigin(params, deps);
+  const origin = deps.origin || (await resolveOrigin(params, deps));
   const strict = parseBool(params.strict, 'strict') === true;
   const includeUnresolved = parseBool(params.include_unresolved, 'include_unresolved') === true;
   const limit = parseLimit(params.limit);

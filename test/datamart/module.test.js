@@ -117,6 +117,26 @@ describe('datamart module', () => {
     expect(bad.body.result.isError).to.equal(true);
   });
 
+  it('answers GET on MCP endpoints with 405 so clients do not reconnect in a loop', async () => {
+    const res = await app.request('/search/mcp', { headers: { accept: 'text/event-stream' } });
+    expect(res.status).to.equal(405);
+    expect(res.headers.get('allow')).to.include('POST');
+  });
+
+  it('joins repeated type params and rejects other repeated scalars', async () => {
+    const both = await (await app.request('/edu?zip=95032&type=university&type=college&radius_miles=30')).json();
+    expect(both.meta.effective_filters.type).to.equal('university,college');
+    const bad = await app.request('/lib?zip=95032&zip=95030');
+    expect(bad.status).to.equal(400);
+  });
+
+  it('datamart_search validates limit and location even for gov only', async () => {
+    for (const q of ['limit=abc', 'limit=-1', 'limit=1000', 'namespace=gov&zip=abc']) {
+      const res = await app.request(`/search?${q}`);
+      expect(res.status, q).to.equal(400);
+    }
+  });
+
   it('root /mcp lists and executes the same tools in-process, never a finance tool (AT19)', async () => {
     const list = await rpc(app, '/mcp', 'tools/list');
     // Core routes read the real module directory; Datamart is one of the modules there.

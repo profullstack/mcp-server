@@ -33,6 +33,9 @@ committed `.env`.
   15/minute and pauses for an hour after a 429. Searches are cached 10 minutes.
 
 Budgets and pauses are per process, which matches the single-instance deploy.
+A `Retry-After` can lengthen a pause but never shorten it below the hour. The
+CLI also saves pauses to `~/.cache/datamart/cooldowns.json` so separate runs
+do not call a provider that is still blocking.
 Run more instances and the published limits are shared, so lower the budgets.
 
 ## Checks after deploy

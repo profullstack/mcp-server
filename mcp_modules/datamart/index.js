@@ -88,7 +88,13 @@ export function argsFromQuery(c, tool) {
     const def = tool.shape[key];
     const inner = def?.unwrap ? def.unwrap() : def;
     const wantsArray = inner instanceof z.ZodArray;
-    args[key] = wantsArray ? values : values.at(-1);
+    if (wantsArray || values.length === 1) {
+      args[key] = wantsArray ? values : values[0];
+    } else if (key === 'type') {
+      args[key] = values.join(','); // ?type=high&type=college == ?type=high,college
+    } else {
+      throw new DatamartError('invalid_filters', `${key} was given more than once`, { field: key });
+    }
   }
   return args;
 }
@@ -177,6 +183,12 @@ function buildMcpServer(label, toolDefs) {
 
 function mountMcp(app, path, label, toolDefs) {
   app.all(path, async c => {
+    // Stateless: there is no server-initiated stream to offer. Answering GET
+    // with an SSE stream that closes at once makes SDK clients reconnect forever.
+    if (c.req.method === 'GET') {
+      c.header('Allow', 'POST, DELETE');
+      return c.text('Method Not Allowed', 405);
+    }
     const server = buildMcpServer(label, toolDefs);
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,

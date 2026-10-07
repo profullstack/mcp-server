@@ -7,6 +7,8 @@
  *   provider says "slow down", so Datamart stays inside published usage limits.
  * - Only allowlisted provider hosts; no redirects to other hosts.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { DatamartError } from './errors.js';
 
 export const USER_AGENT = 'datamart.help/0.1 (+https://datamart.help)';
@@ -64,12 +66,46 @@ function spend(provider) {
   windows.set(provider, recent);
 }
 
+/**
+ * Pause a provider. A Retry-After can lengthen the pause but never shorten it
+ * below the provider's block period: loc.gov restarts its hour on any request.
+ */
 function coolDown(provider, retryAfterSeconds) {
-  const ms = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
-    ? retryAfterSeconds * 1000
-    : limitsFor(provider).cooldownMs;
+  const floor = limitsFor(provider).cooldownMs;
+  const asked = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? retryAfterSeconds * 1000 : 0;
+  const ms = Math.max(floor, asked);
   cooldowns.set(provider, Date.now() + ms);
+  persistCooldowns();
   return Math.ceil(ms / 1000);
+}
+
+let cooldownFile = null;
+
+/**
+ * Keep pauses across short-lived processes (each CLI run is a new process and
+ * would otherwise call a provider that is still blocking us).
+ * @param {string} file
+ */
+export function usePersistentCooldowns(file) {
+  cooldownFile = file;
+  try {
+    const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+    for (const [p, until] of Object.entries(saved)) {
+      if (Number.isFinite(until) && until > Date.now()) cooldowns.set(p, until);
+    }
+  } catch {
+    // no saved state yet
+  }
+}
+
+function persistCooldowns() {
+  if (!cooldownFile) return;
+  try {
+    fs.mkdirSync(path.dirname(cooldownFile), { recursive: true });
+    fs.writeFileSync(cooldownFile, JSON.stringify(Object.fromEntries(cooldowns)));
+  } catch {
+    // best effort; the in-memory pause still applies
+  }
 }
 
 /** Test hook: forget cache and budgets. */

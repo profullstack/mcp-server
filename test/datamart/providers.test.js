@@ -53,6 +53,12 @@ describe('datamart http', () => {
     expect(calls).to.equal(1);
   });
 
+  it('never lets Retry-After shorten the pause below the block period', async () => {
+    const fetch = async () => new Response('x', { status: 429, headers: { 'retry-after': '1' } });
+    const err = await rejects(fetchJson('https://www.loc.gov/r/?fo=json', { provider: 'loc', fetch }), 'source_rate_limited');
+    expect(err.details.retry_after_seconds).to.equal(3600);
+  });
+
   it('enforces the per-minute budget below the published limit', async () => {
     const fetch = async () => json({ ok: true });
     for (let i = 0; i < 15; i++) await fetchJson(`https://www.loc.gov/${i}/?fo=json`, { provider: 'loc', fetch });
@@ -179,5 +185,7 @@ describe('datamart Library of Congress adapter', () => {
     await rejects(loc.search({ q: 'x' }, { fetch: async () => json({ unexpected: true }) }), 'source_unavailable');
     await rejects(loc.search({ format: 'photos', collection: 'x' }), 'invalid_filters');
     await rejects(loc.getItem('../etc/passwd'), 'invalid_filters');
+    await rejects(loc.getItem('..'), 'invalid_filters');
+    await rejects(loc.getItem('.'), 'invalid_filters');
   });
 });

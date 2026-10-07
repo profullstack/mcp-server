@@ -23,7 +23,7 @@ export const FORMATS = [
   'web-archives',
 ];
 const SLUG = /^[a-z0-9][a-z0-9-]{0,120}$/;
-const ITEM_ID = /^[A-Za-z0-9._-]{1,80}$/;
+const ITEM_ID = /^(?!\.+$)[A-Za-z0-9._-]{1,80}$/; // no '.' or '..' path segments
 
 const list = v => (Array.isArray(v) ? v : v == null || v === '' ? [] : [v]);
 const first = v => list(v)[0] ?? null;
