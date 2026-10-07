@@ -69,7 +69,10 @@ function pageFrom(cursor) {
   if (cursor == null || cursor === '') return 1;
   const n = Number(cursor);
   if (!Number.isInteger(n) || n < 1 || n > 2000) {
-    throw new DatamartError('invalid_filters', 'cursor must be a page number from a previous response');
+    throw new DatamartError(
+      'invalid_filters',
+      'cursor must be a page number from a previous response'
+    );
   }
   return n;
 }
@@ -95,11 +98,21 @@ export async function search(params = {}, deps = {}) {
   }
   const page = pageFrom(params.cursor);
   const perPage = Math.min(Math.max(Number(params.per_page) || 20, 1), 100);
-  const qs = new URLSearchParams({ fo: 'json', at: 'results,pagination', c: String(perPage), sp: String(page) });
+  const qs = new URLSearchParams({
+    fo: 'json',
+    at: 'results,pagination',
+    c: String(perPage),
+    sp: String(page),
+  });
   if (params.q) qs.set('q', String(params.q).slice(0, 300));
 
   const url = `${ORIGIN}${path}?${qs}`;
-  const body = await fetchJson(url, { provider: 'loc', timeoutMs: 45000, cacheTtlMs: 30 * 60_000, fetch: deps.fetch });
+  const body = await fetchJson(url, {
+    provider: 'loc',
+    timeoutMs: 45000,
+    cacheTtlMs: 30 * 60_000,
+    fetch: deps.fetch,
+  });
   if (!Array.isArray(body?.results)) {
     throw new DatamartError('source_unavailable', 'loc.gov returned an unexpected search response');
   }
@@ -113,12 +126,25 @@ export async function search(params = {}, deps = {}) {
 export async function listCollections(params = {}, deps = {}) {
   const page = pageFrom(params.cursor);
   const perPage = Math.min(Math.max(Number(params.per_page) || 25, 1), 100);
-  const qs = new URLSearchParams({ fo: 'json', at: 'results,pagination', c: String(perPage), sp: String(page) });
+  const qs = new URLSearchParams({
+    fo: 'json',
+    at: 'results,pagination',
+    c: String(perPage),
+    sp: String(page),
+  });
   if (params.q) qs.set('q', String(params.q).slice(0, 300));
   const url = `${ORIGIN}/collections/?${qs}`;
-  const body = await fetchJson(url, { provider: 'loc', timeoutMs: 30000, cacheTtlMs: 6 * 60 * 60_000, fetch: deps.fetch });
+  const body = await fetchJson(url, {
+    provider: 'loc',
+    timeoutMs: 30000,
+    cacheTtlMs: 6 * 60 * 60_000,
+    fetch: deps.fetch,
+  });
   if (!Array.isArray(body?.results)) {
-    throw new DatamartError('source_unavailable', 'loc.gov returned an unexpected collections response');
+    throw new DatamartError(
+      'source_unavailable',
+      'loc.gov returned an unexpected collections response'
+    );
   }
   return {
     results: body.results.map(r => ({
@@ -134,8 +160,25 @@ export async function listCollections(params = {}, deps = {}) {
   };
 }
 
+/** loc.gov rights notes arrive as HTML; return plain text so clients never render upstream markup. */
+export function plainText(html) {
+  return String(html)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;|\u00a0/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function rightsOf(item) {
-  const advisory = list(item.rights_advisory).concat(list(item.rights)).filter(Boolean);
+  const advisory = list(item.rights_advisory)
+    .concat(list(item.rights))
+    .map(plainText)
+    .filter(Boolean);
   return {
     advisory: advisory.length ? advisory : null,
     access_restricted: item.access_restricted === true,
@@ -148,8 +191,14 @@ async function fetchItem(id, deps) {
     throw new DatamartError('invalid_filters', 'id must be a loc.gov item id such as 2021668470');
   }
   const url = `${ORIGIN}/item/${encodeURIComponent(id)}/?fo=json`;
-  const body = await fetchJson(url, { provider: 'loc', timeoutMs: 30000, cacheTtlMs: 6 * 60 * 60_000, fetch: deps.fetch });
-  if (!body?.item) throw new DatamartError('source_unavailable', 'loc.gov returned an unexpected item response');
+  const body = await fetchJson(url, {
+    provider: 'loc',
+    timeoutMs: 30000,
+    cacheTtlMs: 6 * 60 * 60_000,
+    fetch: deps.fetch,
+  });
+  if (!body?.item)
+    throw new DatamartError('source_unavailable', 'loc.gov returned an unexpected item response');
   return body;
 }
 
