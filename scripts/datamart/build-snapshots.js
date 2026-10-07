@@ -23,7 +23,14 @@ import { fileURLToPath } from 'node:url';
 import { haversineMiles, normalizePlaceName } from '../../src/datamart/geo.js';
 import { LAUNCH_COVERAGE } from '../../src/datamart/coverage.js';
 
-const OUT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'src', 'datamart', 'datasets');
+const OUT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'src',
+  'datamart',
+  'datasets'
+);
 
 const { values: args } = parseArgs({
   options: {
@@ -75,14 +82,17 @@ function readTable(file, { sep = ',', header = true, columns } = {}) {
 const inLaunchArea = (lat, lng) =>
   Number.isFinite(lat) &&
   Number.isFinite(lng) &&
-  haversineMiles(LAUNCH_COVERAGE.lat, LAUNCH_COVERAGE.lng, lat, lng) <= LAUNCH_COVERAGE.radius_miles;
+  haversineMiles(LAUNCH_COVERAGE.lat, LAUNCH_COVERAGE.lng, lat, lng) <=
+    LAUNCH_COVERAGE.radius_miles;
 
-const titleCase = s =>
-  s.toLowerCase().replace(/\b([a-z])/g, m => m.toUpperCase()).replace(/\bJr\b/g, 'Jr');
+const titleCase = s => s.toLowerCase().replace(/\b([a-z])/g, m => m.toUpperCase());
 
 function write(name, meta, data) {
   const file = path.join(OUT, `${name}.json`);
-  fs.writeFileSync(file, JSON.stringify({ meta: { ...meta, retrieved_at: RETRIEVED }, data }) + '\n');
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ meta: { ...meta, retrieved_at: RETRIEVED }, data }) + '\n'
+  );
   const n = Array.isArray(data) ? data.length : Object.keys(data).length;
   console.log(`${name}: ${n} records -> ${path.relative(process.cwd(), file)}`);
 }
@@ -153,7 +163,9 @@ function buildLibraries(outletsFile, aeFile) {
       },
       address: { street: titleCase(r.ADDRESS), city: titleCase(r.CITY), state: 'CA', zip: r.ZIP },
       county: titleCase(r.CNTY),
-      phone: /^\d{10}$/.test(r.PHONE) ? `(${r.PHONE.slice(0, 3)}) ${r.PHONE.slice(3, 6)}-${r.PHONE.slice(6)}` : null,
+      phone: /^\d{10}$/.test(r.PHONE)
+        ? `(${r.PHONE.slice(0, 3)}) ${r.PHONE.slice(3, 6)}-${r.PHONE.slice(6)}`
+        : null,
       lat,
       lng,
       geocode: { status: r.GEOSTATUS, score: Number(r.GEOSCORE), match: r.GEOMTYPE },
@@ -164,7 +176,8 @@ function buildLibraries(outletsFile, aeFile) {
   write(
     'libraries-launch',
     {
-      source: 'Institute of Museum and Library Services, Public Libraries Survey FY2024 (outlet + administrative entity files)',
+      source:
+        'Institute of Museum and Library Services, Public Libraries Survey FY2024 (outlet + administrative entity files)',
       url: 'https://www.imls.gov/sites/default/files/2026-06/pls_fy2024_csv.zip',
       retrieved_via:
         'https://web.archive.org/web/20260708045500id_/https://www.imls.gov/sites/default/files/2026-06/pls_fy2024_csv.zip (imls.gov refuses automated clients; archive SHA-1 matches the original capture)',
@@ -181,12 +194,49 @@ function buildLibraries(outletsFile, aeFile) {
 }
 
 const EDGE_COLUMNS = [
-  'NCESSCH', 'LEAID', 'NAME', 'OPSTFIPS', 'STREET', 'CITY', 'STATE', 'ZIP', 'STFIP', 'CNTY', 'NMCNTY',
-  'LOCALE', 'LAT', 'LON', 'CBSA', 'NMCBSA', 'CBSATYPE', 'CSA', 'NMCSA', 'NECTA', 'CD', 'SLDL', 'SLDU',
+  'NCESSCH',
+  'LEAID',
+  'NAME',
+  'OPSTFIPS',
+  'STREET',
+  'CITY',
+  'STATE',
+  'ZIP',
+  'STFIP',
+  'CNTY',
+  'NMCNTY',
+  'LOCALE',
+  'LAT',
+  'LON',
+  'CBSA',
+  'NMCBSA',
+  'CBSATYPE',
+  'CSA',
+  'NMCSA',
+  'NECTA',
+  'CD',
+  'SLDL',
+  'SLDU',
   'SCHOOLYEAR',
 ];
 const OPEN_STATUSES = new Set(['1', '3', '8']); // Open, New, Reopened
-const GRADE_ORDER = ['PK', 'KG', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13'];
+const GRADE_ORDER = [
+  'PK',
+  'KG',
+  '01',
+  '02',
+  '03',
+  '04',
+  '05',
+  '06',
+  '07',
+  '08',
+  '09',
+  '10',
+  '11',
+  '12',
+  '13',
+];
 
 function gradeTypes(r) {
   const offered = g => r[`G_${g}_OFFERED`] === 'Yes';
@@ -280,14 +330,18 @@ function buildColleges(file) {
     // 1-14 are associate's colleges, so they are community colleges here.
     const carnegie = Number(r.C21BASIC);
     const kind =
-      r.SECTOR === '1' && !(carnegie >= 1 && carnegie <= 14) ? 'university' : COLLEGE_TYPE[r.SECTOR] || 'community_college';
+      r.SECTOR === '1' && !(carnegie >= 1 && carnegie <= 14)
+        ? 'university'
+        : COLLEGE_TYPE[r.SECTOR] || 'community_college';
     data.push({
       id: `us.ca.edu.ipeds-${r.UNITID}`,
       kind: 'campus',
       name: r.INSTNM,
       sector: 'public',
       institution_type: kind,
-      types: [{ university: 'university', community_college: 'college', vocational: 'vocational' }[kind]],
+      types: [
+        { university: 'university', community_college: 'college', vocational: 'vocational' }[kind],
+      ],
       system: r.F1SYSNAM && r.F1SYSNAM !== '-2' ? r.F1SYSNAM : null,
       address: { street: r.ADDR, city: r.CITY, state: 'CA', zip: r.ZIP },
       county: r.COUNTYNM,

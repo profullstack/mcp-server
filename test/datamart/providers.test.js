@@ -248,6 +248,7 @@ describe('datamart Library of Congress adapter', () => {
         '<p>Public domain.</p>\n<p>More about&nbsp;<a href="/legal/">Copyright</a>.</p>'
       )
     ).to.equal('Public domain. More about Copyright .');
+    expect(loc.plainText('a &amp;lt; b')).to.equal('a &lt; b');
     const item = await loc.getItem('2021668470', { fetch });
     expect(item.rights.advisory).to.deep.equal(['No known restrictions on publication.']);
     expect(item.url).to.equal('https://www.loc.gov/item/2021668470/');

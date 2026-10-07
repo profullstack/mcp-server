@@ -35,7 +35,7 @@ export function shortId(idOrUrl) {
 }
 
 function https(u) {
-  return typeof u === 'string' ? u.replace(/^http:\/\/www\.loc\.gov/, ORIGIN) : null;
+  return typeof u === 'string' ? u.replace(/^http:\/\/www\.loc\.gov(?=\/|$)/, ORIGIN) : null;
 }
 
 export function normalizeResult(r) {
@@ -165,11 +165,11 @@ export function plainText(html) {
   return String(html)
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;|\u00a0/g, ' ')
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&') // last, so "&amp;lt;" stays "&lt;"
     .replace(/\s+/g, ' ')
     .trim();
 }
