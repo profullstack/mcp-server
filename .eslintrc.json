@@ -22,6 +22,10 @@
       "env": {
         "mocha": true
       },
+      "globals": {
+        "expect": "readonly",
+        "sinon": "readonly"
+      },
       "rules": {
         "no-unused-expressions": "off"
       }

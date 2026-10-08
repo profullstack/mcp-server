@@ -1,0 +1,10 @@
+{
+  "name": "datamart",
+  "version": "0.1.0",
+  "description": "Datamart (datamart.help): public discovery of government services, Data.gov, Library of Congress, and public libraries and schools near a place",
+  "main": "index.js",
+  "type": "module",
+  "author": "Profullstack, Inc.",
+  "license": "MIT",
+  "keywords": ["mcp", "datamart", "government", "libraries", "education", "data.gov", "library-of-congress"]
+}
