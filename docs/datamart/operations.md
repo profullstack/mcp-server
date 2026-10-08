@@ -15,10 +15,10 @@ or building the separate Next.js web app the PRD describes, is a later step; see
 
 ## Configuration
 
-| Variable | Needed for | If unset |
-| --- | --- | --- |
-| `DATAGOV_API_KEY` | Data.gov tools | They return `configuration_required` (HTTP 503) with a catalog.data.gov handoff. DEMO_KEY is never used as a fallback. |
-| `DATAMART_RPM_LOC`, `DATAMART_RPM_DATAGOV` | Optional per-minute request budgets | Defaults of 15/minute each |
+| Variable                                   | Needed for                          | If unset                                                                                                               |
+| ------------------------------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `DATAGOV_API_KEY`                          | Data.gov tools                      | They return `configuration_required` (HTTP 503) with a catalog.data.gov handoff. DEMO_KEY is never used as a fallback. |
+| `DATAMART_RPM_LOC`, `DATAMART_RPM_DATAGOV` | Optional per-minute request budgets | Defaults of 15/minute each                                                                                             |
 
 Put production values in the team vault and the service environment, not a
 committed `.env`.
@@ -29,6 +29,11 @@ committed `.env`.
   stops calling loc.gov for an hour after any 429 or 503, because loc.gov restarts
   its one-hour block on every request made during it. Responses are cached
   (searches 30 min, items 6 h).
+  On 2026-10-08, right after the first deploy, loc.gov answered the production
+  host (152.53.47.37) with a browser challenge, while the same calls worked from
+  a residential IP the day before. Datamart reports `source_unavailable` and
+  pauses for an hour; it does not bypass the challenge. If it persists, ask the
+  Library of Congress to allow the host, or serve LoC from another egress.
 - **Data.gov**: a personal key allows 1,000 requests/hour. Datamart sends at most
   15/minute and pauses for an hour after a 429. Searches are cached 10 minutes.
 

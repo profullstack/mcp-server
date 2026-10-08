@@ -41,12 +41,21 @@ describe('datamart http', () => {
     expect(called).to.equal(false);
   });
 
-  it('treats a challenge page as an error, not data', async () => {
-    const fetch = async () => html('<title>Radware Captcha Page</title>');
+  it('treats a challenge page as an error, not data, and pauses the provider', async () => {
+    let calls = 0;
+    const fetch = async () => {
+      calls++;
+      return html('<title>Radware Captcha Page</title>');
+    };
     await rejects(
       fetchJson('https://www.loc.gov/search/?fo=json', { provider: 'loc', fetch }),
       'source_unavailable'
     );
+    await rejects(
+      fetchJson('https://www.loc.gov/search/?fo=json&q=2', { provider: 'loc', fetch }),
+      'source_rate_limited'
+    );
+    expect(calls).to.equal(1);
   });
 
   it('does not follow redirects', async () => {
