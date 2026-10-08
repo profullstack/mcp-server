@@ -14,11 +14,7 @@ import { DatamartError } from './errors.js';
 export const USER_AGENT = 'datamart.help/0.1 (+https://datamart.help)';
 
 /** Hosts adapters may call. Anything else is refused before a socket opens. */
-export const ALLOWED_HOSTS = new Set([
-  'api.gsa.gov',
-  'www.loc.gov',
-  'geocoding.geo.census.gov',
-]);
+export const ALLOWED_HOSTS = new Set(['api.gsa.gov', 'www.loc.gov', 'geocoding.geo.census.gov']);
 
 const cache = new Map(); // key -> { expires, value }
 const MAX_CACHE_ENTRIES = 500;
@@ -72,7 +68,8 @@ function spend(provider) {
  */
 function coolDown(provider, retryAfterSeconds) {
   const floor = limitsFor(provider).cooldownMs;
-  const asked = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? retryAfterSeconds * 1000 : 0;
+  const asked =
+    Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? retryAfterSeconds * 1000 : 0;
   const ms = Math.max(floor, asked);
   cooldowns.set(provider, Date.now() + ms);
   persistCooldowns();
@@ -117,7 +114,9 @@ export function resetHttpState() {
 
 function looksLikeChallenge(contentType, text) {
   if (/json/i.test(contentType)) return false;
-  return /captcha|cf-chl|challenge-platform|perfdrive|Just a moment|Access denied/i.test(text.slice(0, 4000));
+  return /captcha|cf-chl|challenge-platform|perfdrive|Just a moment|Access denied/i.test(
+    text.slice(0, 4000)
+  );
 }
 
 /**
@@ -133,10 +132,19 @@ function looksLikeChallenge(contentType, text) {
  * @param {typeof fetch} [opts.fetch]
  */
 export async function fetchJson(url, opts) {
-  const { provider, headers = {}, timeoutMs = 20000, cacheTtlMs = 0, fetch: f = globalThis.fetch } = opts;
+  const {
+    provider,
+    headers = {},
+    timeoutMs = 20000,
+    cacheTtlMs = 0,
+    fetch: f = globalThis.fetch,
+  } = opts;
   const parsed = new URL(url);
   if (parsed.protocol !== 'https:' || !ALLOWED_HOSTS.has(parsed.hostname)) {
-    throw new DatamartError('source_unavailable', `Refusing to fetch non-allowlisted host ${parsed.hostname}`);
+    throw new DatamartError(
+      'source_unavailable',
+      `Refusing to fetch non-allowlisted host ${parsed.hostname}`
+    );
   }
   const key = opts.cacheKey || url;
   if (cacheTtlMs > 0) {
@@ -156,15 +164,21 @@ export async function fetchJson(url, opts) {
     const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError';
     throw new DatamartError(
       'source_unavailable',
-      timedOut ? `${provider} did not answer within ${timeoutMs / 1000}s` : `${provider} request failed`,
+      timedOut
+        ? `${provider} did not answer within ${timeoutMs / 1000}s`
+        : `${provider} request failed`,
       { provider }
     );
   }
 
   if (res.status >= 300 && res.status < 400) {
-    throw new DatamartError('source_unavailable', `${provider} redirected (${res.status}); not followed`, {
-      provider,
-    });
+    throw new DatamartError(
+      'source_unavailable',
+      `${provider} redirected (${res.status}); not followed`,
+      {
+        provider,
+      }
+    );
   }
   if ((COOLDOWN_STATUSES[provider] || [429]).includes(res.status)) {
     const wait = coolDown(provider, Number(res.headers.get('retry-after')));
@@ -177,28 +191,38 @@ export async function fetchJson(url, opts) {
   const contentType = res.headers.get('content-type') || '';
   const text = await res.text();
   if (looksLikeChallenge(contentType, text)) {
+    // A challenge means the provider is blocking us; keep calling and we prolong it.
+    const wait = coolDown(provider);
     throw new DatamartError(
       'source_unavailable',
-      `${provider} answered with a browser challenge instead of data; Datamart does not bypass these`,
-      { provider }
+      `${provider} answered with a browser challenge instead of data; Datamart does not bypass these and paused calls to it`,
+      { provider, retry_after_seconds: wait }
     );
   }
   if (res.status === 404) {
     throw new DatamartError('not_found', `${provider} has no such record`, { provider });
   }
   if (res.status === 401 || res.status === 403) {
-    throw new DatamartError('configuration_required', `${provider} rejected Datamart's credentials`, {
-      provider,
-    });
+    throw new DatamartError(
+      'configuration_required',
+      `${provider} rejected Datamart's credentials`,
+      {
+        provider,
+      }
+    );
   }
   if (!res.ok) {
-    throw new DatamartError('source_unavailable', `${provider} returned HTTP ${res.status}`, { provider });
+    throw new DatamartError('source_unavailable', `${provider} returned HTTP ${res.status}`, {
+      provider,
+    });
   }
   let value;
   try {
     value = JSON.parse(text);
   } catch {
-    throw new DatamartError('source_unavailable', `${provider} returned non-JSON content`, { provider });
+    throw new DatamartError('source_unavailable', `${provider} returned non-JSON content`, {
+      provider,
+    });
   }
 
   if (cacheTtlMs > 0) {
