@@ -8,6 +8,7 @@ import puppeteer from 'puppeteer';
 import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
 import { backlinksDb } from './database.js';
+import { assertEmailSenderAllowed } from './email-policy.js';
 import {
   validateSubmissionData,
   generateSubmissionContent,
@@ -655,6 +656,7 @@ export class BacklinksService {
    * @returns {Promise<Object>} Email result
    */
   async sendMailgunEmail(submission, campaign, emailConfig) {
+    assertEmailSenderAllowed(emailConfig.from_email || `noreply@${emailConfig.mailgun_domain}`);
     const formData = new FormData();
     formData.append(
       'from',
@@ -706,6 +708,7 @@ export class BacklinksService {
    * @returns {Promise<Object>} Email result
    */
   async sendSmtpEmail(submission, campaign, emailConfig) {
+    assertEmailSenderAllowed(emailConfig.smtp_user, emailConfig.from_email);
     const transporter = nodemailer.createTransporter({
       host: emailConfig.smtp_host,
       port: emailConfig.smtp_port || 587,
