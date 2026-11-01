@@ -100,6 +100,9 @@ pnpm install --prod --ignore-scripts
 # Each mcp_modules/* is its OWN pnpm project with its own lockfile -- a root
 # install does NOT reach them, and every module whose deps are missing silently
 # degrades to "Could not load metadata" at boot.
+# Module lockfiles are intentionally ignored and can be stale after a deploy.
+# CI=true makes pnpm default to a frozen install, so allow these ephemeral locks
+# to refresh from each module manifest.
 log "installing module dependencies"
 MOD_DIR="$APP_DIR/mcp_modules"
 installed=0; skipped=0; failed=""
@@ -107,7 +110,7 @@ for m in $(ls -1 "$MOD_DIR" 2>/dev/null); do
   if [ ! -f "$MOD_DIR/$m/package.json" ]; then
     skipped=$((skipped + 1)); continue
   fi
-  if (cd "$MOD_DIR/$m" && pnpm install --prod --ignore-scripts >/dev/null 2>&1); then
+  if (cd "$MOD_DIR/$m" && pnpm install --prod --ignore-scripts --no-frozen-lockfile >/dev/null 2>&1); then
     installed=$((installed + 1))
   else
     failed="$failed $m"
