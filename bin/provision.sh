@@ -66,6 +66,9 @@ if [ -d "$APP_DIR/.git" ]; then
   log "updating $APP_DIR"
   git -C "$APP_DIR" remote set-url origin "$REPO_URL"
   git -C "$APP_DIR" fetch --depth 1 origin "$BRANCH"
+  # Module dependency installs may refresh lockfiles in this deploy checkout.
+  # Clear those tracked changes before switching to the fetched revision.
+  git -C "$APP_DIR" reset --hard -q
   git -C "$APP_DIR" checkout -q -B "$BRANCH" "origin/$BRANCH"
   git -C "$APP_DIR" reset --hard -q "origin/$BRANCH"
 else
@@ -100,9 +103,9 @@ pnpm install --prod --ignore-scripts
 # Each mcp_modules/* is its OWN pnpm project with its own lockfile -- a root
 # install does NOT reach them, and every module whose deps are missing silently
 # degrades to "Could not load metadata" at boot.
-# Module lockfiles are intentionally ignored and can be stale after a deploy.
-# CI=true makes pnpm default to a frozen install, so allow these ephemeral locks
-# to refresh from each module manifest.
+# Some module lockfiles are ignored and others are committed. CI=true makes
+# pnpm default to a frozen install, so allow each install to refresh from its
+# manifest, then restore committed module lockfiles below.
 log "installing module dependencies"
 MOD_DIR="$APP_DIR/mcp_modules"
 installed=0; skipped=0; failed=""
@@ -118,6 +121,7 @@ for m in $(ls -1 "$MOD_DIR" 2>/dev/null); do
 done
 log "modules: $installed installed, $skipped without package.json"
 [ -n "$failed" ] && warn "module install failed:$failed"
+git -C "$APP_DIR" restore --worktree -- 'mcp_modules/*/pnpm-lock.yaml'
 
 # ------------------------------------------------------------------ systemd --
 # Absolute path: systemd does not run a login shell, so mise shims are not on
