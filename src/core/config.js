@@ -72,6 +72,17 @@ export const config = {
     temperature: parseFloat(process.env.ANTHROPIC_TEMPERATURE || '0.7'),
   },
 
+  // c0mpute peer network (model id `c0mpute` or `c0mpute/<model>`), via
+  // @profullstack/ai-providers. No key works on a free tier of 10 calls a day;
+  // an Infernet account key (ik_live_...) is billed per job. OpenAI and
+  // Anthropic (keys above) are its fallback.
+  c0mpute: {
+    apiKey: process.env.C0MPUTE_API_KEY,
+    disabled: parseBool(process.env.C0MPUTE_DISABLED, false),
+    // c0mpute runs at a few tokens a second; 60 to 240 s per call is normal
+    timeoutMs: parseNum(process.env.C0MPUTE_TIMEOUT_MS, 300000),
+  },
+
   // Hugging Face API configuration (optional)
   huggingface: {
     apiKey: process.env.HUGGINGFACE_API_KEY,

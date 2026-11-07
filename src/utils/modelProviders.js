@@ -10,6 +10,7 @@ import fetch from 'node-fetch';
 import https from 'https';
 import http from 'http';
 import FormData from 'form-data';
+import { createAiProviders } from '@profullstack/ai-providers';
 
 // Create HTTP agents for proxy support if enabled
 const createAgents = () => {
@@ -501,6 +502,92 @@ export const huggingfaceProvider = {
   },
 };
 
+let c0mputeRouter;
+let c0mputeRouterKey;
+
+/** One router per configuration, so rotation and parking see every call. */
+function getC0mputeRouter() {
+  const key = [
+    config.c0mpute.apiKey,
+    config.c0mpute.timeoutMs,
+    config.openai.apiKey,
+    config.anthropic.apiKey,
+  ].join('\0');
+  if (!c0mputeRouter || c0mputeRouterKey !== key) {
+    c0mputeRouter = createAiProviders({
+      env: {
+        ...process.env,
+        C0MPUTE_API_KEY: config.c0mpute.apiKey || '',
+        C0MPUTE_DISABLED: config.c0mpute.disabled ? '1' : '',
+        OPENAI_API_KEY: config.openai.apiKey || '',
+        ANTHROPIC_API_KEY: config.anthropic.apiKey || '',
+      },
+      c0mpute: { timeoutMs: config.c0mpute.timeoutMs },
+    });
+    c0mputeRouterKey = key;
+  }
+  return c0mputeRouter;
+}
+
+/**
+ * c0mpute peer network for text generation, with OpenAI and Anthropic
+ * (when their keys are configured) as alternating fallbacks.
+ *
+ * Model ids: `c0mpute` (the network's default models) or `c0mpute/<model>`
+ * to ask for one model, e.g. `c0mpute/qwen2.5:7b`.
+ */
+export const c0mputeProvider = {
+  /** Whole-call timeout; modelManager uses it instead of the shorter default. */
+  get timeoutMs() {
+    return config.c0mpute.timeoutMs;
+  },
+
+  /**
+   * @param {Object} data - { prompt, model, max_tokens, temperature, system }
+   * @returns {Promise<Object>} Inference result
+   */
+  async performInference(data) {
+    // Request-level vendor keys are not forwarded to the shared router
+    if (data.apiKey) delete data.apiKey;
+
+    const modelId = data.model || 'c0mpute';
+    const c0mputeModel = modelId.startsWith('c0mpute/')
+      ? modelId.slice('c0mpute/'.length)
+      : undefined;
+    const maxTokens = data.max_tokens !== undefined ? data.max_tokens : config.openai.maxTokens;
+    const temperature =
+      data.temperature !== undefined ? data.temperature : config.openai.temperature;
+
+    const result = await getC0mputeRouter().generateText({
+      system: data.system,
+      user: data.prompt,
+      maxTokens,
+      temperature,
+      ...(c0mputeModel ? { models: { c0mpute: c0mputeModel } } : {}),
+      feature: 'mcp-server',
+    });
+
+    return {
+      modelId,
+      response: result.text,
+      timestamp: new Date().toISOString(),
+      rawResponse: {
+        provider: result.provider,
+        model: result.model,
+        usage: result.usage,
+      },
+      parameters: {
+        temperature,
+        max_tokens: maxTokens,
+      },
+    };
+  },
+
+  async performStreamingInference() {
+    throw new Error('Streaming is not supported for c0mpute models');
+  },
+};
+
 /**
  * Get the appropriate provider for a given model ID
  * @param {string} modelId - The ID of the model
@@ -508,7 +595,9 @@ export const huggingfaceProvider = {
  */
 export function getProviderForModel(modelId) {
   // Map model IDs to their providers
-  if (
+  if (modelId === 'c0mpute' || modelId.startsWith('c0mpute/')) {
+    return c0mputeProvider;
+  } else if (
     modelId.startsWith('gpt-') ||
     modelId === 'text-davinci-003' ||
     modelId === 'text-davinci-002'

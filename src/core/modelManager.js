@@ -13,6 +13,15 @@ export const modelState = {
   // Sample models for demonstration
   availableModels: [
     {
+      id: 'c0mpute',
+      name: 'c0mpute',
+      version: '1.0',
+      description:
+        'Open models on the c0mpute peer network, with OpenAI and Anthropic as fallbacks. Use c0mpute/<model> to pick a model.',
+      capabilities: ['text-generation', 'code-generation', 'reasoning'],
+      provider: 'c0mpute',
+    },
+    {
       id: 'gpt-4',
       name: 'GPT-4',
       version: '1.0',
@@ -81,7 +90,13 @@ export async function getModelById(modelId) {
       return global.testOverrides.modelManager.getModelById(modelId);
     }
 
-    const model = modelState.availableModels.find(m => m.id === modelId);
+    let model = modelState.availableModels.find(m => m.id === modelId);
+
+    // c0mpute/<model> picks one model on the c0mpute network
+    if (!model && typeof modelId === 'string' && modelId.startsWith('c0mpute/')) {
+      const base = modelState.availableModels.find(m => m.id === 'c0mpute');
+      if (base) model = { ...base, id: modelId, name: modelId };
+    }
 
     if (!model) {
       return null;
@@ -299,11 +314,13 @@ export async function performInference(modelId, data) {
       throw new Error(`No provider available for model ${modelId}`);
     }
 
-    // Set a timeout for the inference request
+    // Set a timeout for the inference request (c0mpute brings a longer one)
+    const inferenceTimeout = Math.max(config.model.inferenceTimeout, provider.timeoutMs || 0);
+    let timer;
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Inference request timed out after ${config.model.inferenceTimeout}ms`));
-      }, config.model.inferenceTimeout);
+      timer = setTimeout(() => {
+        reject(new Error(`Inference request timed out after ${inferenceTimeout}ms`));
+      }, inferenceTimeout);
     });
 
     // Perform the inference with the provider
@@ -313,7 +330,9 @@ export async function performInference(modelId, data) {
     });
 
     // Race the inference against the timeout
-    const result = await Promise.race([inferencePromise, timeoutPromise]);
+    const result = await Promise.race([inferencePromise, timeoutPromise]).finally(() =>
+      clearTimeout(timer)
+    );
 
     // Update last activity
     modelState.lastActivity = new Date().toISOString();
