@@ -81,6 +81,11 @@ nano .env
 At minimum, you'll need to add API keys for the model providers you want to use:
 
 ```
+# c0mpute peer network (model id `c0mpute`). Optional: without a key it gets
+# a free tier of 10 calls a day; an Infernet account key ik_live_... is billed
+# per job. OpenAI and Anthropic below are its fallback.
+C0MPUTE_API_KEY=your_infernet_account_key
+
 # OpenAI API (for GPT-4 and Whisper)
 OPENAI_API_KEY=your_openai_api_key_here
 
@@ -230,15 +235,28 @@ The MCP server implements a standardized set of methods that all MCP servers sho
 
 The MCP server supports the following model types:
 
-| Model Type       | Provider     | Capabilities     | Example IDs                    |
-| ---------------- | ------------ | ---------------- | ------------------------------ |
-| GPT Models       | OpenAI       | Text generation  | gpt-4, gpt-3.5-turbo           |
-| Whisper          | OpenAI       | Speech-to-text   | whisper, whisper-1             |
-| Stable Diffusion | Stability AI | Image generation | stable-diffusion-xl-1024-v1-0  |
-| Claude Models    | Anthropic    | Text generation  | claude-3-opus, claude-3-sonnet |
-| Custom Models    | Hugging Face | Various          | (any Hugging Face model ID)    |
+| Model Type       | Provider                                        | Capabilities     | Example IDs                    |
+| ---------------- | ----------------------------------------------- | ---------------- | ------------------------------ |
+| c0mpute          | c0mpute peer network, OpenAI/Anthropic fallback | Text generation  | c0mpute, c0mpute/qwen2.5:7b    |
+| GPT Models       | OpenAI                                          | Text generation  | gpt-4, gpt-3.5-turbo           |
+| Whisper          | OpenAI                                          | Speech-to-text   | whisper, whisper-1             |
+| Stable Diffusion | Stability AI                                    | Image generation | stable-diffusion-xl-1024-v1-0  |
+| Claude Models    | Anthropic                                       | Text generation  | claude-3-opus, claude-3-sonnet |
+| Custom Models    | Hugging Face                                    | Various          | (any Hugging Face model ID)    |
 
 #### Inference Examples
+
+Text generation on c0mpute (no vendor key needed; calls take 60 to 240 s, so
+`C0MPUTE_TIMEOUT_MS`, default 300000, replaces the shorter inference timeout
+for these models; streaming is not supported yet):
+
+```bash
+curl -X POST http://localhost:3000/model/c0mpute/activate \
+  -H "Content-Type: application/json" -d '{}'
+curl -X POST http://localhost:3000/model/infer \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain quantum computing in simple terms", "max_tokens": 200}'
+```
 
 Text generation with GPT-4:
 
@@ -310,15 +328,18 @@ Configuration is loaded from environment variables and stored in `src/core/confi
 
 Key environment variables include:
 
-| Variable            | Description                          | Default                            |
-| ------------------- | ------------------------------------ | ---------------------------------- |
-| PORT                | Server port                          | 3000                               |
-| HOST                | Server host                          | localhost                          |
-| NODE_ENV            | Environment (development/production) | development                        |
-| OPENAI_API_KEY      | OpenAI API key                       | (required for OpenAI models)       |
-| STABILITY_API_KEY   | Stability AI API key                 | (required for Stable Diffusion)    |
-| ANTHROPIC_API_KEY   | Anthropic API key                    | (required for Claude models)       |
-| HUGGINGFACE_API_KEY | Hugging Face API key                 | (required for Hugging Face models) |
+| Variable            | Description                           | Default                            |
+| ------------------- | ------------------------------------- | ---------------------------------- |
+| PORT                | Server port                           | 3000                               |
+| HOST                | Server host                           | localhost                          |
+| NODE_ENV            | Environment (development/production)  | development                        |
+| C0MPUTE_API_KEY     | Infernet account key for `c0mpute`    | (optional; free tier without)      |
+| C0MPUTE_TIMEOUT_MS  | Whole call for `c0mpute` models       | 300000                             |
+| C0MPUTE_DISABLED    | `true` skips c0mpute (fallbacks only) | false                              |
+| OPENAI_API_KEY      | OpenAI API key                        | (required for OpenAI models)       |
+| STABILITY_API_KEY   | Stability AI API key                  | (required for Stable Diffusion)    |
+| ANTHROPIC_API_KEY   | Anthropic API key                     | (required for Claude models)       |
+| HUGGINGFACE_API_KEY | Hugging Face API key                  | (required for Hugging Face models) |
 
 See `sample.env` for a complete list of configuration options.
 
