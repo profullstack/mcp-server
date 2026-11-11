@@ -8,5 +8,5 @@
   "package": "./package.json",
   "recursive": true,
   "exit": true,
-  "globals": ["importModule", "testOverrides"]
+  "globals": ["importModule", "testOverrides", "__zod_globalConfig", "__zod_globalRegistry"]
 }
