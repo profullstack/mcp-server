@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as streamTransform from 'stream-transform';
+import { describeTool } from './toolAnnotations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,10 +116,13 @@ export function setupCoreRoutes(app) {
             return moduleTools.map(t => {
               const name = typeof t === 'string' ? t : (t?.name ?? String(t));
               // A tool may be declared as an object with its own description and schema.
+              const { title, annotations } = describeTool(name, typeof t === 'object' && t ? t : {});
               return {
                 name,
+                title,
                 description: (typeof t === 'object' && t?.description) || m.description || `Tool from module ${m.name}`,
                 inputSchema: (typeof t === 'object' && t?.inputSchema) || { type: 'object', additionalProperties: true },
+                annotations,
               };
             });
           });
