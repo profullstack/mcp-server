@@ -19,8 +19,8 @@ importers:
         specifier: 1.32.1
         version: 1.32.1(zod@4.6.7)
       '@profullstack/ai-providers':
-        specifier: 0.1.2
-        version: 0.1.2
+        specifier: ^0.3.1
+        version: 0.3.1
       '@profullstack/stack':
         specifier: 0.4.0
         version: 0.4.0
@@ -151,8 +151,8 @@ packages:
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
 
-  '@profullstack/ai-providers@0.1.2':
-    resolution: {integrity: sha512-nOcKaOhfcDM+RNruA4+znva5xXxI4HF77iqUCgieuou2w8yY8LIF2p5ajSVD4kzFtfIUjC7GhGV8eyOrliHg1w==}
+  '@profullstack/ai-providers@0.3.1':
+    resolution: {integrity: sha512-mihwPJnGfBW52GRloG74bhmSokAdXBrMj/wDqOSxCcoj55n6nhe1c2/498BRuq/D0CyXXdVPe1VmHviWd4jMoA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -1744,7 +1744,7 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.8.0
 
-  '@profullstack/ai-providers@0.1.2': {}
+  '@profullstack/ai-providers@0.3.1': {}
 
   '@profullstack/emailer@1.0.3': {}
 
