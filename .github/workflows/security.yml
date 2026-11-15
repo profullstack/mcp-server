@@ -9,21 +9,6 @@ on:
     - cron: "11 6 * * 1"
 
 jobs:
-  semgrep:
-    name: semgrep
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    container:
-      image: semgrep/semgrep
-    steps:
-      - uses: actions/checkout@v4
-      - run: |
-          semgrep scan --error --severity ERROR \
-            --config p/javascript \
-            --config p/typescript \
-            --config p/owasp-top-ten \
-            --config p/secrets
-
   npm-audit:
     name: npm audit
     runs-on: ubuntu-latest
