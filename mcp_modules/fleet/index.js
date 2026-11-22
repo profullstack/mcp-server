@@ -29,7 +29,10 @@ export const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        category: { type: 'string', description: 'e.g. developer-tools, ai, finance, media, security' },
+        category: {
+          type: 'string',
+          description: 'e.g. developer-tools, ai, finance, media, security',
+        },
         has: { type: 'string', enum: SURFACES, description: 'only services with this surface' },
       },
       additionalProperties: false,
@@ -37,32 +40,40 @@ export const tools = [
   },
   {
     name: 'fleet_get_service',
-    description: 'Everything about one Profullstack service by domain, URL or name: surfaces, MCP endpoint, npm packages, pwamart install page, auth.',
+    description:
+      'Everything about one Profullstack service by domain, URL or name: surfaces, MCP endpoint, npm packages, pwamart install page, auth.',
     inputSchema: {
       type: 'object',
-      properties: { service: { type: 'string', description: 'domain, URL or name, e.g. "hqtui.com"' } },
+      properties: {
+        service: { type: 'string', description: 'domain, URL or name, e.g. "hqtui.com"' },
+      },
       required: ['service'],
       additionalProperties: false,
     },
   },
   {
     name: 'fleet_search_services',
-    description: 'Search the Profullstack fleet by what you need, e.g. "podcast directory" or "webhooks".',
+    description:
+      'Search the Profullstack fleet by what you need, e.g. "podcast directory" or "webhooks".',
     inputSchema: {
       type: 'object',
-      properties: { query: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 62 } },
+      properties: {
+        query: { type: 'string' },
+        limit: { type: 'integer', minimum: 1, maximum: FLEET.services.length },
+      },
       required: ['query'],
       additionalProperties: false,
     },
   },
   {
     name: 'fleet_get_auth',
-    description: 'How to sign in to any Profullstack service: CoinPay OAuth (OIDC) issuer, discovery URL, scopes, PKCE and callback path.',
+    description:
+      'How to sign in to any Profullstack service: CoinPay OAuth (OIDC) issuer, discovery URL, scopes, PKCE and callback path.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
 ];
 
-const brief = (s) => ({
+const brief = s => ({
   domain: s.domain,
   name: s.name,
   category: s.category,
@@ -76,7 +87,11 @@ const brief = (s) => ({
 export async function callTool(name, args = {}) {
   switch (name) {
     case 'fleet_list_services':
-      return { total: FLEET.services.length, categories: categories(), services: listServices(args).map(brief) };
+      return {
+        total: FLEET.services.length,
+        categories: categories(),
+        services: listServices(args).map(brief),
+      };
     case 'fleet_get_service': {
       const s = getService(args.service);
       if (!s) throw new Error(`no Profullstack service matches "${args.service}"`);
@@ -93,15 +108,24 @@ export async function callTool(name, args = {}) {
 
 export async function register(app) {
   logger.info('Registering fleet module');
-  app.get('/fleet', (c) => c.json({ module: 'fleet', services: FLEET.services.length, updated: FLEET.updated, auth: FLEET_AUTH }));
-  app.get('/fleet/services', async (c) => c.json(await callTool('fleet_list_services', c.req.query())));
-  app.get('/fleet/services/:domain', (c) => {
+  app.get('/fleet', c =>
+    c.json({
+      module: 'fleet',
+      services: FLEET.services.length,
+      updated: FLEET.updated,
+      auth: FLEET_AUTH,
+    })
+  );
+  app.get('/fleet/services', async c =>
+    c.json(await callTool('fleet_list_services', c.req.query()))
+  );
+  app.get('/fleet/services/:domain', c => {
     const s = getService(c.req.param('domain'));
     return s ? c.json(s) : c.json({ error: 'no such service' }, 404);
   });
-  app.get('/tools/fleet/info', (c) => c.json({ name: 'fleet', tools }));
+  app.get('/tools/fleet/info', c => c.json({ name: 'fleet', tools }));
   for (const t of tools) {
-    app.post(`/tools/fleet/${t.name}`, async (c) => {
+    app.post(`/tools/fleet/${t.name}`, async c => {
       try {
         const args = await c.req.json().catch(() => ({}));
         return c.json(await callTool(t.name, args));
@@ -119,13 +143,17 @@ export async function unregister() {
 export const metadata = {
   name: 'fleet',
   version: '1.0.0',
-  description: 'The Profullstack fleet catalog: 62 services, their APIs, MCP servers and installers, all on CoinPay OAuth',
+  description: `The Profullstack fleet catalog: ${FLEET.services.length} services, their APIs, MCP servers and installers, all on CoinPay OAuth`,
   author: 'Profullstack, Inc.',
   tools,
   endpoints: [
     { path: '/fleet', method: 'GET', description: 'Catalog summary and auth' },
     { path: '/fleet/services', method: 'GET', description: 'List services (?category=&has=)' },
     { path: '/fleet/services/:domain', method: 'GET', description: 'One service' },
-    ...tools.map((t) => ({ path: `/tools/fleet/${t.name}`, method: 'POST', description: t.description })),
+    ...tools.map(t => ({
+      path: `/tools/fleet/${t.name}`,
+      method: 'POST',
+      description: t.description,
+    })),
   ],
 };
