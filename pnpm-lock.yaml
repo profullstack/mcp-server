@@ -22,8 +22,8 @@ importers:
         specifier: ^0.3.1
         version: 0.3.1
       '@profullstack/stack':
-        specifier: 0.4.0
-        version: 0.4.0
+        specifier: 0.6.2
+        version: 0.6.2
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
@@ -156,11 +156,24 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
+  '@profullstack/contact-form@0.1.0':
+    resolution: {integrity: sha512-X+qnTk9MPG5EXDMCiRS/CI0DcQLZ7YVVnsnkN/EwThB5ZqPw8TgTYb7C0NzuJsQnO5f2GCBPxtRNiP+mpAXMDw==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      react: '>=18.0.0'
+    peerDependenciesMeta:
+      react:
+        optional: true
+
   '@profullstack/emailer@1.0.3':
     resolution: {integrity: sha512-VyAtCcfnSI6LOwJvWogCr3ZNmEsaZw+iuWrqnosLsdcKsbRyCrCmXigMNZJZEjlgYlR+lK//PwNPG+xtCFvWAw==}
 
   '@profullstack/form-guard@0.1.1':
     resolution: {integrity: sha512-RGLGfQhjq40f+JqEhSmsJnS0I5sFWjYdrYx4VYtkUqz8xvioN2yyR+6uFK0mnDAStKrYytlngg3meUsrChm/OQ==}
+    engines: {node: '>=20'}
+
+  '@profullstack/form-guard@0.3.0':
+    resolution: {integrity: sha512-/rn5xd4mMG6eXGe85BmPfhz7zz3mmsmNV7U6a1bNhATIpVtKKEUEGF4QPrFx8sg6YDtpFkzmvjNEaFJm3DbFxg==}
     engines: {node: '>=20'}
 
   '@profullstack/referrals@0.1.0':
@@ -172,8 +185,8 @@ packages:
       react:
         optional: true
 
-  '@profullstack/stack@0.4.0':
-    resolution: {integrity: sha512-8iQzEiPp9UbrW7qqF5nHZJhQr3lOXQvMDQf+HyMWbZd4uEiYlSaKEbgBpKk7LM4/CADLZPNO10t5ovBqBJ9V9A==}
+  '@profullstack/stack@0.6.2':
+    resolution: {integrity: sha512-YTz0SW1KAbE7awb460aBO2LaSPZ/xmThRjEcFV5Iw7eT/gII6uyl61HD95474wKfAfGZtJ867bUY0DJHm8kqng==}
     engines: {node: '>=18'}
     peerDependencies:
       '@supabase/ssr': '>=0.5.0'
@@ -1746,14 +1759,22 @@ snapshots:
 
   '@profullstack/ai-providers@0.3.1': {}
 
+  '@profullstack/contact-form@0.1.0':
+    dependencies:
+      '@profullstack/emailer': 1.0.3
+      '@profullstack/form-guard': 0.3.0
+
   '@profullstack/emailer@1.0.3': {}
 
   '@profullstack/form-guard@0.1.1': {}
 
+  '@profullstack/form-guard@0.3.0': {}
+
   '@profullstack/referrals@0.1.0': {}
 
-  '@profullstack/stack@0.4.0':
+  '@profullstack/stack@0.6.2':
     dependencies:
+      '@profullstack/contact-form': 0.1.0
       '@profullstack/emailer': 1.0.3
       '@profullstack/form-guard': 0.1.1
       '@profullstack/referrals': 0.1.0
