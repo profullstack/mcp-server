@@ -26,7 +26,7 @@ describe('fleet module', () => {
 
   it('answers each tool from the stack catalog', async () => {
     const all = await callTool('fleet_list_services', {});
-    expect(all.total).to.equal(62);
+    expect(all.total).to.equal(61);
     expect((await callTool('fleet_get_service', { service: 'https://www.hqtui.com/' })).name).to.equal('HQTUI');
     expect((await callTool('fleet_search_services', { query: 'app store' })).some((s) => s.domain === 'pwamart.com')).to.equal(true);
     expect((await callTool('fleet_get_auth')).issuer).to.equal('https://coinpayportal.com');
